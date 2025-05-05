@@ -607,28 +607,6 @@ Resources:
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt UserPool.Arn
 
-  UserPoolTriggerUpdate:
-    Type: Custom::CognitoTrigger
-    DependsOn:
-      - WelcomeEmailFunction
-      - WelcomeEmailPermission
-    Properties:
-      ServiceToken: !GetAtt TriggerSetupFunction.Arn
-      UserPoolId: !Ref UserPool
-      PostConfirmationTrigger: !GetAtt WelcomeEmailFunction.Arn
-
-  TriggerSetupFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.utils.CognitoTriggerSetup::handleRequest
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:UpdateUserPool
-              Resource: !GetAtt UserPool.Arn
-
   LoginNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -838,15 +816,15 @@ Resources:
     Properties:
       AlarmName: !Sub "${AppName}-${StageName}-primary-region-health"
       AlarmDescription: "Alarm when the primary region services are unhealthy"
-      MetricName: 5XXError
-      Namespace: AWS/ApiGateway
-      Statistic: Sum
+      MetricName: "5XXError"
+      Namespace: "AWS/ApiGateway"
+      Statistic: "Sum"
       Period: 60
       EvaluationPeriods: 1
       Threshold: 5
-      ComparisonOperator: GreaterThanThreshold
+      ComparisonOperator: "GreaterThanThreshold"
       Dimensions:
-        - Name: ApiName
+        - Name: "ApiName"
           Value: !Ref PhotoBlogApi
       AlarmActions:
         - !Ref SystemAlertTopic
@@ -869,13 +847,13 @@ Resources:
     Properties:
       AlarmName: !Sub "${AppName}-${StageName}-backup-region-health"
       AlarmDescription: "Alarm when the backup region services are unhealthy"
-      Namespace: AWS/EC2
-      MetricName: StatusCheckFailed
-      Statistic: Maximum
+      Namespace: "AWS/EC2"
+      MetricName: "StatusCheckFailed"
+      Statistic: "Maximum"
       Period: 60
       EvaluationPeriods: 2
       Threshold: 1
-      ComparisonOperator: GreaterThanOrEqualToThreshold
+      ComparisonOperator: "GreaterThanOrEqualToThreshold"
       AlarmActions:
         - !Ref SystemAlertTopic
         - !GetAtt DisasterRecoveryTriggerFunction.Arn
@@ -886,15 +864,15 @@ Resources:
     Properties:
       AlarmName: !Sub "${AppName}-${StageName}-health-check-alarm"
       AlarmDescription: "Alarm when the app is unreachable"
-      MetricName: HealthCheckStatus
-      Namespace: AWS/Route53
-      Statistic: Minimum
+      MetricName: "HealthCheckStatus"
+      Namespace: "AWS/Route53"
+      Statistic: "Minimum"
       Period: 60
       EvaluationPeriods: 1
       Threshold: 1
-      ComparisonOperator: LessThanThreshold
+      ComparisonOperator: "LessThanThreshold"
       Dimensions:
-        - Name: HealthCheckId
+        - Name: "HealthCheckId"
           Value: !Ref Route53HealthCheck
       AlarmActions:
         - !Ref SystemAlertTopic
