@@ -426,6 +426,7 @@ Resources:
             Path: /photos/{photoId}
             Method: get
 
+  # Photo Delete and Share Functions
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -795,8 +796,14 @@ Resources:
       Timeout: 300
       MemorySize: 1024
       Policies:
-        - Route53CrudPolicy:
-            HostedZoneId: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - route53:ChangeResourceRecordSets
+                - route53:ListResourceRecordSets
+                - route53:GetHostedZone
+                - route53:ListHostedZones
+              Resource: "*"
       Environment:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
@@ -831,23 +838,6 @@ Resources:
     Properties:
       AlarmName: !Sub "${AppName}-${StageName}-primary-region-health"
       AlarmDescription: "Alarm when the primary region services are unhealthy"
-      MetricName: StatusCheckFailed
-      Namespace: AWS/EC2
-      Statistic: Maximum
-      Period: 60
-      EvaluationPeriods: 2
-      Threshold: 1
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      AlarmActions:
-        - !Ref SystemAlertTopic
-        - !GetAtt DisasterRecoveryTriggerFunction.Arn
-
-  ApiGatewayAlarm:
-    Type: AWS::CloudWatch::Alarm
-    DependsOn: PhotoBlogApi
-    Properties:
-      AlarmName: !Sub "${AppName}-${StageName}-api-gateway-error-rate"
-      AlarmDescription: "Alarm if API Gateway 5XX errors exceed threshold"
       MetricName: 5XXError
       Namespace: AWS/ApiGateway
       Statistic: Sum
@@ -873,6 +863,22 @@ Resources:
       HealthCheckTags:
         - Key: Name
           Value: !Sub "${AppName}-${StageName}-health-check"
+
+  BackupRegionStatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppName}-${StageName}-backup-region-health"
+      AlarmDescription: "Alarm when the backup region services are unhealthy"
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SystemAlertTopic
+        - !GetAtt DisasterRecoveryTriggerFunction.Arn
 
   Route53HealthAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -954,3 +960,11 @@ Outputs:
   BackupRegion:
     Description: Backup AWS Region for Disaster Recovery
     Value: !Ref BackupRegion
+
+  ApiGatewayAlarm:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: PhotoBlogApi
+    Properties:
+      AlarmName: !Sub "${AppName}-${StageName}-api-gateway-error-rate"
+      AlarmDescription: "Alarm if API Gateway 5XX errors exceed threshold"
+      MetricName:
