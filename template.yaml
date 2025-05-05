@@ -39,7 +39,7 @@ Parameters:
 
   DisasterRecoveryRegion:
     Type: String
-    Default: us-west-2
+    Default: eu-central-1
     Description: Secondary region for disaster recovery (different from primary region)
 
 Resources:
@@ -212,7 +212,6 @@ Resources:
     Type: AWS::Serverless::Api
     DependsOn: UserPool
     Properties:
-      StageName: !Ref Stage
       Cors:
         AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
