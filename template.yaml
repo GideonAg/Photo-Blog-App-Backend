@@ -77,6 +77,14 @@ Resources:
             AllowedOrigins:
               - !Sub "https://${DomainName}"
             MaxAge: 3600
+      ReplicationConfiguration:
+        Role: !GetAtt S3ReplicationRole.Arn
+        Rules:
+          - Status: Enabled
+            Destination:
+              Bucket: !Sub "arn:aws:s3:::${Stage}-photoblog-dr-${AWS::AccountId}"
+            DeleteMarkerReplication:
+              Status: Enabled
 
   DrProcessedBucket:
     Type: AWS::S3::Bucket
@@ -98,23 +106,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-
-  ProcessedBucketReplication:
-    Type: AWS::S3::BucketReplication
-    DependsOn:
-      - ProcessedBucket
-      - DrProcessedBucket
-      - S3ReplicationRole
-    Properties:
-      Bucket: !Ref ProcessedBucket
-      ReplicationConfiguration:
-        Role: !GetAtt S3ReplicationRole.Arn
-        Rules:
-          - Status: Enabled
-            Destination:
-              Bucket: !Sub "arn:aws:s3:::${Stage}-photoblog-dr-${AWS::AccountId}"
-            DeleteMarkerReplication:
-              Status: Enabled
 
   PhotosTable:
     Type: AWS::DynamoDB::Table
