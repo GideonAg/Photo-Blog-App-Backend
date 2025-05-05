@@ -212,6 +212,7 @@ Resources:
     Type: AWS::Serverless::Api
     DependsOn: UserPool
     Properties:
+      StageName: !Ref Stage
       Cors:
         AllowMethods: "'GET,POST,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
@@ -732,7 +733,6 @@ Resources:
       AlarmActions:
         - !Ref SystemAlertTopic
 
-  # Explicitly define API deployment to help control dependencies
   PhotosApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -741,16 +741,6 @@ Resources:
     Properties:
       RestApiId: !Ref PhotosApi
       Description: "Initial deployment for Photo Blog API"
-
-  PhotosApiStage:
-    Type: AWS::ApiGateway::Stage
-    DependsOn:
-      - PhotosApi
-      - PhotosApiDeployment
-    Properties:
-      RestApiId: !Ref PhotosApi
-      DeploymentId: !Ref PhotosApiDeployment
-      StageName: !Ref Stage
 
 Outputs:
   PhotosApiEndpoint:
