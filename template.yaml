@@ -274,7 +274,6 @@ Resources:
           ResourceRecords:
             - !GetAtt EmailIdentity.DkimAttributes.Tokens.2
 
-  # User-related functions
   SignupNotificationFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -286,7 +285,7 @@ Resources:
       Handler: com.photoblog.auth.SignupNotificationHandler::handleRequest
       Description: Sends welcome emails to new users
       Policies:
-        - SESFullAccess
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - DynamoDBCrudPolicy:
@@ -341,7 +340,7 @@ Resources:
       Handler: com.photoblog.auth.LoginNotificationHandler::handleRequest
       Description: Sends login notification emails
       Policies:
-        - SESFullAccess
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt UserNotificationTopic.TopicName
 
