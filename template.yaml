@@ -127,10 +127,6 @@ Resources:
           - Id: DeleteAfterProcessing
             Status: Enabled
             ExpirationInDays: 1
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt ImageProcessingFunction.Arn
 
   ProcessedBucket:
     Type: AWS::S3::Bucket
@@ -187,10 +183,6 @@ Resources:
             ProjectionType: ALL
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-      ReplicationSpecification:
-        RegionMapping:
-          !Ref AWS::Region: !Ref AWS::Region
-          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
 
   UsersTable:
     Type: AWS::DynamoDB::Table
@@ -205,10 +197,6 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-      ReplicationSpecification:
-        RegionMapping:
-          !Ref AWS::Region: !Ref AWS::Region
-          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
 
   EmailIdentity:
     Type: AWS::SES::EmailIdentity
@@ -274,12 +262,6 @@ Resources:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
-      Events:
-        CognitoPostConfirmation:
-          Type: Cognito
-          Properties:
-            UserPool: !Ref UserPool
-            Trigger: PostConfirmation
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
@@ -451,8 +433,13 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
-        - CognitoUserPoolPolicy:
-            UserPoolId: !Ref UserPool
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:DescribeUserPool
+                - cognito-idp:ListUsers
+                - cognito-idp:AdminGetUser
+              Resource: !GetAtt UserPool.Arn
       Events:
         ScheduledBackup:
           Type: Schedule
@@ -473,10 +460,10 @@ Resources:
             TopicName: !GetAtt SystemAlertTopic.TopicName
         - SESFullAccess
       Events:
-        CloudWatchAlarm:
-          Type: CloudWatchAlarm
+        SNSAlert:
+          Type: SNS
           Properties:
-            AlarmName: !Ref ServiceAvailabilityAlarm
+            Topic: !Ref SystemAlertTopic
 
   PhotosApi:
     Type: AWS::Serverless::Api
