@@ -6,7 +6,7 @@ Description: Personal Photo Blog App Backend with Multi-Region Disaster Recovery
 Parameters:
   AppName:
     Type: String
-    Default: photo-blog
+    Default: photo-blog-app
     Description: Name of the application
 
   StageName:
