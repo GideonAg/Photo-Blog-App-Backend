@@ -694,7 +694,7 @@ Resources:
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SystemAlertTopic.TopicName
-        - SESFullAccess
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
       Events:
         SNSAlert:
           Type: SNS
