@@ -207,6 +207,7 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
       PreventUserExistenceErrors: ENABLED
 
+  # Break the circular dependency by creating API resources first without events
   PhotosApi:
     Type: AWS::Serverless::Api
     DependsOn: UserPool
@@ -235,7 +236,54 @@ Resources:
               Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
               Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+      Models:
+        PhotoModel:
+          type: object
+          properties:
+            photoId:
+              type: string
+            userId:
+              type: string
+            title:
+              type: string
+            description:
+              type: string
+            uploadDate:
+              type: string
+            s3Key:
+              type: string
 
+  DNSRecords:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn:
+      - HostedZone
+      - PhotosApi
+      - EmailIdentity
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      RecordSets:
+        - Name: !Ref DomainName
+          Type: A
+          AliasTarget:
+            DNSName: !Sub "${PhotosApi}.execute-api.${AWS::Region}.amazonaws.com"
+            HostedZoneId: !Sub "Z2FDTNDATAQYW2"
+        - Name: !Sub "_amazonses.noreply.${DomainName}"
+          Type: TXT
+          TTL: '1800'
+          ResourceRecords:
+            - !GetAtt EmailIdentity.DkimAttributes.Tokens.0
+        - Name: !Sub "_dkim1.noreply.${DomainName}"
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !GetAtt EmailIdentity.DkimAttributes.Tokens.1
+        - Name: !Sub "_dkim2.noreply.${DomainName}"
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !GetAtt EmailIdentity.DkimAttributes.Tokens.2
+
+  # User-related functions
   SignupNotificationFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -317,10 +365,10 @@ Resources:
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt UserPool.Arn
 
+  # Photo-related Lambda functions - defined without API events initially
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     DependsOn:
-      - PhotosApi
       - StagingBucket
       - PhotosTable
     Properties:
@@ -332,18 +380,10 @@ Resources:
             BucketName: !Ref StagingBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-      Events:
-        UploadAPI:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /photos
-            Method: post
 
   PhotoQueryFunction:
     Type: AWS::Serverless::Function
     DependsOn:
-      - PhotosApi
       - PhotosTable
       - ProcessedBucket
     Properties:
@@ -355,24 +395,10 @@ Resources:
             TableName: !Ref PhotosTable
         - S3ReadPolicy:
             BucketName: !Ref ProcessedBucket
-      Events:
-        GetPhotos:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /photos
-            Method: get
-        GetPhoto:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /photos/{photoId}
-            Method: get
 
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     DependsOn:
-      - PhotosApi
       - ProcessedBucket
       - PhotosTable
     Properties:
@@ -384,18 +410,10 @@ Resources:
             BucketName: !Ref ProcessedBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-      Events:
-        DeletePhoto:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /photos/{photoId}
-            Method: delete
 
   PhotoShareFunction:
     Type: AWS::Serverless::Function
     DependsOn:
-      - PhotosApi
       - ProcessedBucket
       - PhotosTable
     Properties:
@@ -407,18 +425,10 @@ Resources:
             BucketName: !Ref ProcessedBucket
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
-      Events:
-        SharePhoto:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /photos/{photoId}/share
-            Method: post
 
   RecycleBinFunction:
     Type: AWS::Serverless::Function
     DependsOn:
-      - PhotosApi
       - ProcessedBucket
       - PhotosTable
     Properties:
@@ -430,26 +440,142 @@ Resources:
             BucketName: !Ref ProcessedBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-      Events:
-        GetRecycleBin:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /recyclebin
-            Method: get
-        RestorePhoto:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /recyclebin/{photoId}/restore
-            Method: post
-        DeletePermanent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref PhotosApi
-            Path: /recyclebin/{photoId}
-            Method: delete
 
+  # API event permissions for Lambda functions (without circular references)
+  PhotoUploadPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - PhotoUploadFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PhotoUploadFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/POST/photos"
+
+  PhotoQueryGetAllPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - PhotoQueryFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PhotoQueryFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/GET/photos"
+
+  PhotoQueryGetOnePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - PhotoQueryFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PhotoQueryFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/GET/photos/{photoId}"
+
+  PhotoDeletePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - PhotoDeleteFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PhotoDeleteFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/DELETE/photos/{photoId}"
+
+  PhotoSharePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - PhotoShareFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PhotoShareFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/POST/photos/{photoId}/share"
+
+  RecycleBinGetPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - RecycleBinFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref RecycleBinFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/GET/recyclebin"
+
+  RecycleBinRestorePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - RecycleBinFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref RecycleBinFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/POST/recyclebin/{photoId}/restore"
+
+  RecycleBinDeletePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - PhotosApi
+      - RecycleBinFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref RecycleBinFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/DELETE/recyclebin/{photoId}"
+
+  ApiRoutes:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - PhotosApi
+      - PhotoUploadFunction
+      - PhotoQueryFunction
+      - PhotoDeleteFunction
+      - PhotoShareFunction
+      - RecycleBinFunction
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ParentId: !GetAtt PhotosApi.RootResourceId
+      PathPart: "routes"
+
+  # Define API integration separately to avoid circular dependencies
+  UploadPhotoIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - PhotoUploadFunction
+      - PhotoUploadPermission
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !GetAtt PhotosApi.RootResourceId
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoUploadFunction.Arn}/invocations"
+
+  CognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    DependsOn:
+      - PhotosApi
+      - UserPool
+    Properties:
+      RestApiId: !Ref PhotosApi
+      Name: CognitoUserPoolAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !GetAtt UserPool.Arn
+
+  # Rest of the resources
   ImageProcessingFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -585,6 +711,7 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
+  # Set up alarm separately from API Gateway to avoid circular dependencies
   ServiceAvailabilityAlarm:
     Type: AWS::CloudWatch::Alarm
     DependsOn:
@@ -606,35 +733,25 @@ Resources:
       AlarmActions:
         - !Ref SystemAlertTopic
 
-  DNSRecords:
-    Type: AWS::Route53::RecordSetGroup
+  # Explicitly define API deployment to help control dependencies
+  PhotosApiDeployment:
+    Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - HostedZone
       - PhotosApi
-      - EmailIdentity
+      - UploadPhotoIntegration
     Properties:
-      HostedZoneId: !Ref HostedZone
-      RecordSets:
-        - Name: !Ref DomainName
-          Type: A
-          AliasTarget:
-            DNSName: !Sub "${PhotosApi}.execute-api.${AWS::Region}.amazonaws.com"
-            HostedZoneId: !GetAtt PhotosApi.RegionalHostedZoneId
-        - Name: !Sub "_amazonses.noreply.${DomainName}"
-          Type: TXT
-          TTL: '1800'
-          ResourceRecords:
-            - !Sub '"${EmailIdentity.DkimDNSTokenValue1}"'
-        - Name: !Sub "_dkim1.noreply.${DomainName}"
-          Type: CNAME
-          TTL: '1800'
-          ResourceRecords:
-            - !Sub "${EmailIdentity.DkimDNSTokenValue2}"
-        - Name: !Sub "_dkim2.noreply.${DomainName}"
-          Type: CNAME
-          TTL: '1800'
-          ResourceRecords:
-            - !Sub "${EmailIdentity.DkimDNSTokenValue3}"
+      RestApiId: !Ref PhotosApi
+      Description: "Initial deployment for Photo Blog API"
+
+  PhotosApiStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn:
+      - PhotosApi
+      - PhotosApiDeployment
+    Properties:
+      RestApiId: !Ref PhotosApi
+      DeploymentId: !Ref PhotosApiDeployment
+      StageName: !Ref Stage
 
 Outputs:
   PhotosApiEndpoint:
