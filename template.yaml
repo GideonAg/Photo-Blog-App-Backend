@@ -254,7 +254,7 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.ApiHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
@@ -312,7 +312,7 @@ Resources:
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
       Timeout: 300
       MemorySize: 1024
@@ -337,7 +337,7 @@ Resources:
   ProcessingRetryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
       Policies:
         - SQSSendMessagePolicy:
@@ -352,7 +352,7 @@ Resources:
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.auth.WelcomeEmailHandler::handleRequest
       Policies:
         - SESCrudPolicy:
@@ -361,7 +361,7 @@ Resources:
   LoginNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
       Policies:
         - SESCrudPolicy:
@@ -376,7 +376,7 @@ Resources:
   UserNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
       Policies:
         - SESCrudPolicy:
@@ -390,7 +390,7 @@ Resources:
   SystemAlertFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
       Policies:
         - SESCrudPolicy:
@@ -404,7 +404,7 @@ Resources:
   CognitoBackupFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./target/photo-blog-backend-1.0.0.jar
+      CodeUri: ./
       Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
       Timeout: 300
       MemorySize: 1024
@@ -492,7 +492,6 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
 
-# Outputs
 Outputs:
   ApiUrl:
     Description: URL of the API Gateway endpoint
