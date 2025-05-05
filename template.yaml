@@ -1,0 +1,553 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Photo Blog App Backend - AWS SAM Template with Route 53 Domain Provisioning
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: java21
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        REGION: !Ref AWS::Region
+        DR_REGION: !Ref DisasterRecoveryRegion
+        DOMAIN_NAME: !Ref DomainName
+        FROM_EMAIL: !Sub "noreply@${DomainName}"
+        FRONTEND_URL: !Sub "https://${DomainName}"
+        STAGING_BUCKET: !Ref StagingBucket
+        PROCESSED_BUCKET: !Ref ProcessedBucket
+        PHOTOS_TABLE: !Ref PhotosTable
+        USERS_TABLE: !Ref UsersTable
+        USER_POOL_ID: !Ref UserPool
+        USER_POOL_CLIENT_ID: !Ref UserPoolClient
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Deployment environment stage
+
+  DomainName:
+    Type: String
+    Default: mscv2group1.link
+    Description: Domain name for the application (registered via Route 53)
+
+  DisasterRecoveryRegion:
+    Type: String
+    Default: us-west-2
+    Description: Secondary region for disaster recovery (different from primary region)
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: !Sub "Hosted zone for ${DomainName} created for Photo Blog App"
+
+  DNSRecords:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn:
+      - HostedZone
+      - PhotosApi
+      - EmailIdentity
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      RecordSets:
+        - Name: !Ref DomainName
+          Type: A
+          AliasTarget:
+            DNSName: !Sub "${PhotosApi}.execute-api.${AWS::Region}.amazonaws.com"
+            HostedZoneId: !GetAtt PhotosApi.RegionalHostedZoneId
+        - Name: !Sub "_amazonses.noreply.${DomainName}"
+          Type: TXT
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '"${EmailIdentity.DkimDNSTokenValue1}"'
+        - Name: !Sub "_dkim1.noreply.${DomainName}"
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub "${EmailIdentity.DkimDNSTokenValue2}"
+        - Name: !Sub "_dkim2.noreply.${DomainName}"
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub "${EmailIdentity.DkimDNSTokenValue3}"
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${Stage}-PhotoBlogUserPool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: family_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      LambdaConfig:
+        PostConfirmation: !GetAtt SignupNotificationFunction.Arn
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${Stage}-PhotoBlogClient
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+
+  StagingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${Stage}-photoblog-staging-${AWS::AccountId}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteAfterProcessing
+            Status: Enabled
+            ExpirationInDays: 1
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt ImageProcessingFunction.Arn
+
+  ProcessedBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub "${Stage}-photoblog-processed-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+            AllowedOrigins:
+              - !Sub "https://${DomainName}"
+            MaxAge: 3600
+      ReplicationConfiguration:
+        Role: !GetAtt S3ReplicationRole.Arn
+        Rules:
+          - Status: Enabled
+            Destination:
+              Bucket: !Sub "arn:aws:s3:::${Stage}-photoblog-dr-${AWS::AccountId}"
+            DeleteMarkerReplication:
+              Status: Enabled
+
+  DrProcessedBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub "${Stage}-photoblog-dr-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+
+  PhotosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Stage}-PhotosTable"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: photoId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: photoId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      ReplicationSpecification:
+        RegionMapping:
+          !Ref AWS::Region: !Ref AWS::Region
+          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Stage}-UsersTable"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      ReplicationSpecification:
+        RegionMapping:
+          !Ref AWS::Region: !Ref AWS::Region
+          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
+
+  EmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Sub "noreply@${DomainName}"
+
+  SystemAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${Stage}-SystemAlertTopic"
+      DisplayName: "Photo Blog System Alerts"
+
+  UserNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${Stage}-UserNotificationTopic"
+      DisplayName: "Photo Blog User Notifications"
+
+  ServiceAvailabilityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${Stage}-ServiceAvailability"
+      AlarmDescription: "Alarm when service availability drops"
+      MetricName: "5XXError"
+      Namespace: "AWS/ApiGateway"
+      Dimensions:
+        - Name: ApiName
+          Value: !Ref PhotosApi
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SystemAlertTopic
+
+  LoginNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.LoginNotificationHandler::handleRequest
+      Description: Sends login notification emails
+      Policies:
+        - SESFullAccess
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt UserNotificationTopic.TopicName
+      Events:
+        CognitoEvent:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref UserPool
+            Trigger: PostAuthentication
+
+  SignupNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.SignupNotificationHandler::handleRequest
+      Description: Sends welcome emails to new users
+      Policies:
+        - SESFullAccess
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt UserNotificationTopic.TopicName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        CognitoPostConfirmation:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref UserPool
+            Trigger: PostConfirmation
+
+  PhotoUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
+      Description: Handles photo upload
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref StagingBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+      Events:
+        UploadAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /photos
+            Method: post
+
+  PhotoQueryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
+      Description: Retrieves photos for a user
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PhotosTable
+        - S3ReadPolicy:
+            BucketName: !Ref ProcessedBucket
+      Events:
+        GetPhotos:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /photos
+            Method: get
+        GetPhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /photos/{photoId}
+            Method: get
+
+  PhotoDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Description: Moves photos to recycling bin
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ProcessedBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+      Events:
+        DeletePhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /photos/{photoId}
+            Method: delete
+
+  PhotoShareFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
+      Description: Generates time-bound sharing links
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref ProcessedBucket
+        - DynamoDBReadPolicy:
+            TableName: !Ref PhotosTable
+      Events:
+        SharePhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /photos/{photoId}/share
+            Method: post
+
+  RecycleBinFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.photos.RecycleBinHandler::handleRequest
+      Description: Manages the recycling bin feature
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ProcessedBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+      Events:
+        GetRecycleBin:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /recyclebin
+            Method: get
+        RestorePhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /recyclebin/{photoId}/restore
+            Method: post
+        DeletePermanent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotosApi
+            Path: /recyclebin/{photoId}
+            Method: delete
+
+  ImageProcessingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
+      Description: Processes and watermarks images
+      Timeout: 60
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref StagingBucket
+        - S3CrudPolicy:
+            BucketName: !Ref ProcessedBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - SESFullAccess
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt UserNotificationTopic.TopicName
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref StagingBucket
+            Events: s3:ObjectCreated:*
+
+  ProcessingRetryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
+      Description: Retries failed image processing after 5 minutes
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref StagingBucket
+        - EventBridgeFullAccess
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Name: !Sub "${Stage}-ProcessingRetrySchedule"
+            Description: "Schedule for retrying failed image processing"
+            Enabled: true
+
+  CognitoBackupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
+      Description: Backs up Cognito user pool to DR region
+      Timeout: 300
+      MemorySize: 1024
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - CognitoUserPoolPolicy:
+            UserPoolId: !Ref UserPool
+      Events:
+        ScheduledBackup:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day)
+            Name: !Sub "${Stage}-CognitoBackupSchedule"
+            Description: "Daily backup of Cognito user pool"
+            Enabled: true
+
+  SystemAlertFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
+      Description: Sends system outage alerts
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SystemAlertTopic.TopicName
+        - SESFullAccess
+      Events:
+        CloudWatchAlarm:
+          Type: CloudWatchAlarm
+          Properties:
+            AlarmName: !Ref ServiceAvailabilityAlarm
+
+  PhotosApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: !Sub "'https://${DomainName}'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+        AddDefaultAuthorizerToCorsPreflight: false
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+              Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+              Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
+  S3ReplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+Outputs:
+  PhotosApiEndpoint:
+    Description: "API Gateway endpoint URL for the Photos API"
+    Value: !Sub "https://${PhotosApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+
+  UserPoolId:
+    Description: "ID of the Cognito User Pool"
+    Value: !Ref UserPool
+
+  UserPoolClientId:
+    Description: "ID of the Cognito User Pool Client"
+    Value: !Ref UserPoolClient
+
+  StagingBucketName:
+    Description: "Name of the S3 bucket for staging uploads"
+    Value: !Ref StagingBucket
+
+  ProcessedBucketName:
+    Description: "Name of the S3 bucket for processed images"
+    Value: !Ref ProcessedBucket
+
+  PhotosTableName:
+    Description: "Name of the DynamoDB table for photos"
+    Value: !Ref PhotosTable
+
+  UsersTableName:
+    Description: "Name of the DynamoDB table for users"
+    Value: !Ref UsersTable
+
+  HostedZoneId:
+    Description: "ID of the Route 53 Hosted Zone"
+    Value: !Ref HostedZone
