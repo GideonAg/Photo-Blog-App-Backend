@@ -960,11 +960,3 @@ Outputs:
   BackupRegion:
     Description: Backup AWS Region for Disaster Recovery
     Value: !Ref BackupRegion
-
-  ApiGatewayAlarm:
-    Type: AWS::CloudWatch::Alarm
-    DependsOn: PhotoBlogApi
-    Properties:
-      AlarmName: !Sub "${AppName}-${StageName}-api-gateway-error-rate"
-      AlarmDescription: "Alarm if API Gateway 5XX errors exceed threshold"
-      MetricName:
