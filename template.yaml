@@ -187,28 +187,28 @@ Resources:
             ProjectionType: ALL
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-      ReplicationSpecification:
-        RegionMapping:
-          !Ref AWS::Region: !Ref AWS::Region
-          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
+        ReplicationSpecification:
+          RegionMapping:
+            !Sub "${AWS::Region}": !Ref AWS::Region
+            !Sub "${DisasterRecoveryRegion}": !Ref DisasterRecoveryRegion
 
-  UsersTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${Stage}-UsersTable"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: userId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: userId
-          KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      ReplicationSpecification:
-        RegionMapping:
-          !Ref AWS::Region: !Ref AWS::Region
-          !Ref DisasterRecoveryRegion: !Ref DisasterRecoveryRegion
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: !Sub "${Stage}-UsersTable"
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        ReplicationSpecification:
+          RegionMapping:
+            !Sub "${AWS::Region}": !Ref AWS::Region
+            !Sub "${DisasterRecoveryRegion}": !Ref DisasterRecoveryRegion
 
   EmailIdentity:
     Type: AWS::SES::EmailIdentity
