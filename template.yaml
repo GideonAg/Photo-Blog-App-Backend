@@ -43,7 +43,6 @@ Parameters:
     Description: Secondary region for disaster recovery (different from primary region)
 
 Resources:
-  # First create core infrastructure resources
   HostedZone:
     Type: AWS::Route53::HostedZone
     Properties:
@@ -64,6 +63,8 @@ Resources:
   ProcessedBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
+    DependsOn:
+      - S3ReplicationRole
     Properties:
       BucketName: !Sub "${Stage}-photoblog-processed-${AWS::AccountId}"
       VersioningConfiguration:
@@ -86,14 +87,6 @@ Resources:
             DeleteMarkerReplication:
               Status: Enabled
 
-  DrProcessedBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    Properties:
-      BucketName: !Sub "${Stage}-photoblog-dr-${AWS::AccountId}"
-      VersioningConfiguration:
-        Status: Enabled
-
   S3ReplicationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -104,8 +97,29 @@ Resources:
             Principal:
               Service: s3.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyName: S3ReplicationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${Stage}-photoblog-processed-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ReplicateObject
+                  - s3:ReplicateDelete
+                  - s3:ReplicateTags
+                Resource: !Sub "arn:aws:s3:::${Stage}-photoblog-dr-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${Stage}-photoblog-processed-${AWS::AccountId}"
+                  - !Sub "arn:aws:s3:::${Stage}-photoblog-dr-${AWS::AccountId}"
 
   PhotosTable:
     Type: AWS::DynamoDB::Table
@@ -198,7 +212,6 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
       PreventUserExistenceErrors: ENABLED
 
-  # Break the circular dependency by creating API resources first without events
   PhotosApi:
     Type: AWS::Serverless::Api
     DependsOn: UserPool
@@ -313,7 +326,6 @@ Resources:
       LambdaConfig:
         PostConfirmation: !GetAtt SignupNotificationFunction.Arn
 
-  # Lambda function to set the trigger
   SetUserPoolLambdaTriggerFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -355,7 +367,6 @@ Resources:
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt UserPool.Arn
 
-  # Photo-related Lambda functions - defined without API events initially
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -431,7 +442,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
 
-  # API event permissions for Lambda functions (without circular references)
   PhotoUploadPermission:
     Type: AWS::Lambda::Permission
     DependsOn:
@@ -520,30 +530,62 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PhotosApi}/*/DELETE/recyclebin/{photoId}"
 
-  ApiRoutes:
+  PhotosResource:
     Type: AWS::ApiGateway::Resource
     DependsOn:
       - PhotosApi
-      - PhotoUploadFunction
-      - PhotoQueryFunction
-      - PhotoDeleteFunction
-      - PhotoShareFunction
-      - RecycleBinFunction
     Properties:
       RestApiId: !Ref PhotosApi
       ParentId: !GetAtt PhotosApi.RootResourceId
-      PathPart: "routes"
+      PathPart: photos
 
-  # Define API integration separately to avoid circular dependencies
+  PhotoIdResource:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - PhotosResource
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ParentId: !Ref PhotosResource
+      PathPart: "{photoId}"
+
+  ShareResource:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - PhotoIdResource
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ParentId: !Ref PhotoIdResource
+      PathPart: share
+
+  RecycleBinResource:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - PhotosApi
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ParentId: !GetAtt PhotosApi.RootResourceId
+      PathPart: recyclebin
+
+  RecycleBinPhotoIdResource:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - RecycleBinResource
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ParentId: !Ref RecycleBinResource
+      PathPart: "{photoId}"
+
   UploadPhotoIntegration:
     Type: AWS::ApiGateway::Method
     DependsOn:
       - PhotosApi
+      - PhotosResource
       - PhotoUploadFunction
       - PhotoUploadPermission
+      - CognitoAuthorizer
     Properties:
       RestApiId: !Ref PhotosApi
-      ResourceId: !GetAtt PhotosApi.RootResourceId
+      ResourceId: !Ref PhotosResource
       HttpMethod: POST
       AuthorizationType: COGNITO_USER_POOLS
       AuthorizerId: !Ref CognitoAuthorizer
@@ -551,6 +593,139 @@ Resources:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoUploadFunction.Arn}/invocations"
+
+  PhotoQueryGetAllIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - PhotosResource
+      - PhotoQueryFunction
+      - PhotoQueryGetAllPermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref PhotosResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+
+  PhotoQueryGetOneIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - PhotoIdResource
+      - PhotoQueryFunction
+      - PhotoQueryGetOnePermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref PhotoIdResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+
+  PhotoDeleteIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - PhotoIdResource
+      - PhotoDeleteFunction
+      - PhotoDeletePermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref PhotoIdResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoDeleteFunction.Arn}/invocations"
+
+  PhotoShareIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - ShareResource
+      - PhotoShareFunction
+      - PhotoSharePermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref ShareResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoShareFunction.Arn}/invocations"
+
+  RecycleBinGetIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - RecycleBinResource
+      - RecycleBinFunction
+      - RecycleBinGetPermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref RecycleBinResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinFunction.Arn}/invocations"
+
+  RecycleBinRestoreIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - RecycleBinPhotoIdResource
+      - RecycleBinFunction
+      - RecycleBinRestorePermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref RecycleBinPhotoIdResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinFunction.Arn}/invocations"
+
+  RecycleBinDeleteIntegration:
+    Type: AWS::ApiGateway::Method
+    DependsOn:
+      - PhotosApi
+      - RecycleBinPhotoIdResource
+      - RecycleBinFunction
+      - RecycleBinDeletePermission
+      - CognitoAuthorizer
+    Properties:
+      RestApiId: !Ref PhotosApi
+      ResourceId: !Ref RecycleBinPhotoIdResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinFunction.Arn}/invocations"
 
   CognitoAuthorizer:
     Type: AWS::ApiGateway::Authorizer
@@ -565,7 +740,6 @@ Resources:
       ProviderARNs:
         - !GetAtt UserPool.Arn
 
-  # Rest of the resources
   ImageProcessingFunction:
     Type: AWS::Serverless::Function
     DependsOn:
@@ -587,7 +761,7 @@ Resources:
             BucketName: !Ref ProcessedBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-        - SESFullAccess
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - DynamoDBReadPolicy:
@@ -701,7 +875,6 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
-  # Set up alarm separately from API Gateway to avoid circular dependencies
   ServiceAvailabilityAlarm:
     Type: AWS::CloudWatch::Alarm
     DependsOn:
@@ -728,6 +901,13 @@ Resources:
     DependsOn:
       - PhotosApi
       - UploadPhotoIntegration
+      - PhotoQueryGetAllIntegration
+      - PhotoQueryGetOneIntegration
+      - PhotoDeleteIntegration
+      - PhotoShareIntegration
+      - RecycleBinGetIntegration
+      - RecycleBinRestoreIntegration
+      - RecycleBinDeleteIntegration
     Properties:
       RestApiId: !Ref PhotosApi
       Description: "Initial deployment for Photo Blog API"
