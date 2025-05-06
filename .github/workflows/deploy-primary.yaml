@@ -77,4 +77,5 @@ jobs:
               BackupUserPoolClientId=${{ env.BACKUP_USER_POOL_CLIENT_ID }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
-            --no-fail-on-empty-changeset
+            --no-fail-on-empty-changeset \
+            --resolve-s3
