@@ -50,7 +50,6 @@ Parameters:
     Description: ID of the backup Cognito user pool client
     Default: ""
 
-# Define Globals
 Globals:
   Function:
     Timeout: 30
@@ -69,9 +68,7 @@ Globals:
         MAIN_BUCKET: !Ref MainBucket
         BACKUP_BUCKET_ARN: !Ref BackupBucketArn
 
-# Resources
 Resources:
-  # S3 Buckets for primary region
   StagingBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -94,7 +91,6 @@ Resources:
               - !Sub "https://${DomainName}"
             MaxAge: 3600
 
-  # S3 Cross Region Replication Role
   S3ReplicationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -163,7 +159,6 @@ Resources:
               Bucket: !Ref BackupBucketArn
               StorageClass: STANDARD
 
-  # DynamoDB Tables
   PhotosTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -208,7 +203,6 @@ Resources:
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
 
-  # SNS Topics
   SystemAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -221,7 +215,6 @@ Resources:
       TopicName: !Sub "${AppName}-${StageName}-user-notifications"
       DisplayName: "User Notifications"
 
-  # SQS Queues
   ImageProcessingQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -235,7 +228,6 @@ Resources:
       DelaySeconds: 300
       VisibilityTimeout: 300
 
-  # Cognito Resources - Primary Region
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -274,7 +266,6 @@ Resources:
       Domain: !Sub "${AppName}-${StageName}"
       UserPoolId: !Ref UserPool
 
-  # API Gateway
   PhotoBlogApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -289,9 +280,7 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
 
-  # Lambda Functions - Separated by feature to avoid circular dependencies
 
-  # Photo Upload and Query Functions
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -347,7 +336,6 @@ Resources:
             Path: /photos/{photoId}
             Method: get
 
-  # Photo Delete and Share Functions
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -392,7 +380,6 @@ Resources:
             Path: /photos/{photoId}/share
             Method: post
 
-  # Recycle Bin Functions
   RecycleBinQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -459,7 +446,6 @@ Resources:
             Path: /recycle-bin/{photoId}
             Method: delete
 
-  # Image Processing Functions
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -509,7 +495,6 @@ Resources:
             Queue: !GetAtt ProcessingRetryQueue.Arn
             BatchSize: 1
 
-  # Notification Functions
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -571,7 +556,6 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
-  # Disaster Recovery Functions
   BackupHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
