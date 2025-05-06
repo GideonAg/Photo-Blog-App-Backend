@@ -20,12 +20,24 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set up Java 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Build with SAM
+        run: sam build -t primary-template.yaml
 
       - name: Get backup resources from eu-central-1
         run: |
@@ -53,8 +65,8 @@ jobs:
 
       - name: Deploy CloudFormation stack
         run: |
-          aws cloudformation deploy \
-            --template-file primary-template.yaml \
+          sam deploy \
+            --template .aws-sam/build/template.yaml \
             --stack-name photo-blog-primary \
             --parameter-overrides \
               AppName=photo-blog \
@@ -63,4 +75,6 @@ jobs:
               BackupBucketArn=${{ env.BACKUP_BUCKET_ARN }} \
               BackupUserPoolId=${{ env.BACKUP_USER_POOL_ID }} \
               BackupUserPoolClientId=${{ env.BACKUP_USER_POOL_CLIENT_ID }} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
