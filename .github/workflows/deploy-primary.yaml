@@ -63,6 +63,18 @@ jobs:
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
 
+      - name: Create S3 Bucket if it does not exist
+        run: |
+          BUCKET_NAME="my-photo-blog-deployment-bucket"
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket $BUCKET_NAME already exists"
+          else
+            echo "Creating bucket $BUCKET_NAME"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
+          fi
+        env:
+          AWS_DEFAULT_REGION: eu-west-1
+
       - name: Deploy CloudFormation stack
         run: |
           sam deploy \
@@ -78,4 +90,4 @@ jobs:
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --resolve-s3
+            --s3-bucket my-photo-blog-deployment-bucket
