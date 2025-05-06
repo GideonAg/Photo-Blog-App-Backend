@@ -22,7 +22,7 @@ Parameters:
   PrimaryAccountId:
     Type: String
     Description: AWS Account ID where the primary region resources are deployed
-    Default: ""
+    Default: AWS::AccountId
 
 Resources:
   # Backup S3 Bucket
