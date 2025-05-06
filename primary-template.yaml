@@ -765,6 +765,40 @@ Resources:
       AlarmActions:
         - !Ref SystemAlertTopic
 
+  CognitoSyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.disaster.CognitoSyncHandler::handleRequest
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PRIMARY_USER_POOL_ID: !Ref UserPool
+          BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
+          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+          PRIMARY_REGION: !Ref AWS::Region
+          BACKUP_REGION: !Ref BackupRegion
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CognitoBackupTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+              Resource:
+                - !GetAtt UserPool.Arn
+                - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS::AccountId}:userpool/${BackupUserPoolId}"
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day)
+            Name: CognitoBackupSchedule
+            Description: Daily backup of Cognito user data
+
 # Outputs
 Outputs:
   ApiUrl:
@@ -819,38 +853,4 @@ Outputs:
     Description: ARN of the user notification SNS topic
     Value: !Ref UserNotificationTopic
     Export:
-      Name: !Sub "${AppName}-${StageName}-user-notification-topic-arn"User
-              - cognito-idp:AdminSetUserPassword
-              Resource:
-                - !GetAtt UserPool.Arn
-                - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS::AccountId}:userpool/${BackupUserPoolId}"
-      Events:
-        ScheduledEvent:
-          Type: Schedule
-          Properties:
-            Schedule: rate(1 day)
-            Name: CognitoBackupSchedule
-            Description: Daily backup of Cognito user data
-
-  CognitoSyncFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.CognitoSyncHandler::handleRequest
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          PRIMARY_USER_POOL_ID: !Ref UserPool
-          BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
-          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CognitoBackupTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:ListUsers
-                - cognito-idp:AdminCreate
+      Name: !Sub "${AppName}-${StageName}-user-notification-topic-arn"
