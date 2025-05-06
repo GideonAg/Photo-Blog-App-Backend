@@ -2,7 +2,7 @@ name: Deploy Backup Region
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'backup-template.yaml'
       - '.github/workflows/deploy-backup.yml'
