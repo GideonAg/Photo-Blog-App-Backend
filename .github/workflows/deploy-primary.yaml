@@ -81,7 +81,7 @@ jobs:
             --template .aws-sam/build/template.yaml \
             --stack-name photo-blog-primary \
             --parameter-overrides \
-              AppName=photo-blog \
+              AppName=photo-blog-application \
               StageName=dev \
               BackupRegion=eu-central-1 \
               BackupBucketArn=${{ env.BACKUP_BUCKET_ARN }} \
