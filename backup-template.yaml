@@ -32,8 +32,13 @@ Resources:
       BucketName: !Sub "${AppName}-${StageName}-backup-${AWS::Region}-${AWS::AccountId}"
       VersioningConfiguration:
         Status: Enabled
-      # Add bucket policy to allow replication from primary region
-      BucketPolicy:
+
+  # Separate bucket policy resource
+  BackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Sid: AllowReplicationFromPrimaryRegion
