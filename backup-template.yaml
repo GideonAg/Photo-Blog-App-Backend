@@ -25,7 +25,6 @@ Parameters:
     Default: "711387109786"
 
 Resources:
-  # Backup S3 Bucket
   BackupBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -33,9 +32,22 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
+  ReplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-${StageName}-replication-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
   BackupBucketPolicy:
     Type: AWS::S3::BucketPolicy
-    DependsOn: BackupBucket
     Properties:
       Bucket: !Ref BackupBucket
       PolicyDocument:
@@ -44,7 +56,7 @@ Resources:
           - Sid: AllowReplication
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${PrimaryAccountId}:role/service-role/s3-replication-role"
+              AWS: !GetAtt ReplicationRole.Arn
             Action:
               - s3:ReplicateObject
               - s3:ReplicateDelete
@@ -56,7 +68,6 @@ Resources:
               - !Sub "${BackupBucket.Arn}/*"
               - !GetAtt BackupBucket.Arn
 
-  # Backup Cognito User Pool
   BackupUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -78,7 +89,6 @@ Resources:
 
   BackupUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
-    DependsOn: BackupUserPool
     Properties:
       ClientName: !Sub "${AppName}-${StageName}-backup-client"
       UserPoolId: !Ref BackupUserPool
@@ -88,7 +98,6 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
       PreventUserExistenceErrors: ENABLED
 
-  # DynamoDB Table for Cognito backup (recipient of global table replication)
   CognitoBackupTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -103,7 +112,6 @@ Resources:
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
 
-  # DynamoDB Table for Photos (recipient of global table replication)
   PhotosTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -134,7 +142,6 @@ Resources:
         AttributeName: expiresAt
         Enabled: true
 
-  # CloudWatch Alarm for monitoring the backup region
   BackupRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -150,7 +157,6 @@ Resources:
       AlarmActions:
         - !Ref BackupAlertTopic
 
-  # SNS Topic for backup region alerts
   BackupAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -169,6 +175,12 @@ Outputs:
     Value: !GetAtt BackupBucket.Arn
     Export:
       Name: !Sub "${AppName}-${StageName}-backup-bucket-arn"
+
+  ReplicationRoleArn:
+    Description: ARN of the IAM role for S3 replication
+    Value: !GetAtt ReplicationRole.Arn
+    Export:
+      Name: !Sub "${AppName}-${StageName}-replication-role-arn"
 
   BackupUserPoolId:
     Description: Backup Cognito User Pool ID
