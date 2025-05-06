@@ -34,27 +34,27 @@ Resources:
         Status: Enabled
 
   BackupBucketPolicy:
-  Type: AWS::S3::BucketPolicy
-  DependsOn: BackupBucket
-  Properties:
-    Bucket: !Ref BackupBucket
-    PolicyDocument:
-      Version: '2012-10-17'
-      Statement:
-        - Sid: AllowReplication
-          Effect: Allow
-          Principal:
-            AWS: !Sub "arn:aws:iam::${PrimaryAccountId}:role/service-role/s3-replication-role"
-          Action:
-            - s3:ReplicateObject
-            - s3:ReplicateDelete
-            - s3:ReplicateTags
-            - s3:GetObjectVersionTagging
-            - s3:GetReplicationConfiguration
-            - s3:ListBucket
-          Resource:
-            - !Sub "${BackupBucket.Arn}/*"
-            - !GetAtt BackupBucket.Arn
+    Type: AWS::S3::BucketPolicy
+    DependsOn: BackupBucket
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowReplication
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${PrimaryAccountId}:role/service-role/s3-replication-role"
+            Action:
+              - s3:ReplicateObject
+              - s3:ReplicateDelete
+              - s3:ReplicateTags
+              - s3:GetObjectVersionTagging
+              - s3:GetReplicationConfiguration
+              - s3:ListBucket
+            Resource:
+              - !Sub "${BackupBucket.Arn}/*"
+              - !GetAtt BackupBucket.Arn
 
   # Backup Cognito User Pool
   BackupUserPool:
