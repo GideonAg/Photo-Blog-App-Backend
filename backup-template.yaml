@@ -36,6 +36,7 @@ Resources:
   # Separate bucket policy resource
   BackupBucketPolicy:
     Type: AWS::S3::BucketPolicy
+    DependsOn: BackupBucket
     Properties:
       Bucket: !Ref BackupBucket
       PolicyDocument:
@@ -50,7 +51,7 @@ Resources:
               - s3:ReplicateDelete
               - s3:ReplicateTags
               - s3:GetObjectVersionTagging
-            Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-backup-${AWS::Region}-${AWS::AccountId}/*"
+            Resource: !Sub "${BackupBucket.Arn}/*"
           - Sid: AllowReplicationConfigurationFromPrimaryRegion
             Effect: Allow
             Principal:
@@ -58,7 +59,7 @@ Resources:
             Action:
               - s3:GetReplicationConfiguration
               - s3:ListBucket
-            Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-backup-${AWS::Region}-${AWS::AccountId}"
+            Resource: !GetAtt BackupBucket.Arn
 
   # Backup Cognito User Pool
   BackupUserPool:
