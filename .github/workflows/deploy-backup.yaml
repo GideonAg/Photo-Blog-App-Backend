@@ -5,7 +5,7 @@ on:
     branches: [ main, dev ]
     paths:
       - 'backup-template.yaml'
-      - '.github/workflows/deploy-backup.yml'
+      - '.github/workflows/deploy-backup.yaml'
   workflow_dispatch:
 
 jobs:
