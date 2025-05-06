@@ -1,0 +1,66 @@
+name: Deploy Primary Region
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'primary-template.yaml'
+      - '.github/workflows/deploy-primary.yml'
+  workflow_run:
+    workflows: ["Deploy Backup Region"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Get backup resources from eu-central-1
+        run: |
+          BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupBucketArn'].OutputValue" \
+            --output text)
+          
+          BACKUP_USER_POOL_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolId'].OutputValue" \
+            --output text)
+          
+          BACKUP_USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
+            --output text)
+          
+          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
+          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
+          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file primary-template.yaml \
+            --stack-name photo-blog-primary \
+            --parameter-overrides \
+              AppName=photo-blog \
+              StageName=dev \
+              BackupRegion=eu-central-1 \
+              BackupBucketArn=${{ env.BACKUP_BUCKET_ARN }} \
+              BackupUserPoolId=${{ env.BACKUP_USER_POOL_ID }} \
+              BackupUserPoolClientId=${{ env.BACKUP_USER_POOL_CLIENT_ID }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
