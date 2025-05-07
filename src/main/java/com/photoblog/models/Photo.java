@@ -42,4 +42,7 @@ public class Photo {
 
     @DynamoDBAttribute
     private String updatedAt;
+
+    @DynamoDBAttribute
+    private String versionId;
 }

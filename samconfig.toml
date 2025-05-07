@@ -6,10 +6,12 @@ stack_name = "photoblog-backend-dev"
 s3_prefix = "photoblog-backend-dev"
 region = "eu-west-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
-parameter_overrides = "Stage=\"dev\" DomainName=\"mscv2group1.link\" DisasterRecoveryRegion=\"eu-central-1\""
+parameter_overrides = "AppName=\"photo-blog-app\" StageName=\"dev\" DomainName=\"mscv2group1.link\" FrontendBucketName=\"photo-blog-frontend-assets\" EmailSender=\"notifications@mscv2group1.link\" PrimaryRegion=\"eu-west-1\" BackupRegion=\"eu-central-1\""
 confirm_changeset = true
 fail_on_empty_changeset = false
 tags = "project=\"MSC2\" application=\"PhotoBlog\""
+resolve_s3 = true
+image_repositories = []
 
 [prod]
 [prod.deploy]
