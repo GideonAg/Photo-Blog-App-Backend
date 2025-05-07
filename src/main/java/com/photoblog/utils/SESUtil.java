@@ -1,8 +1,13 @@
 package com.photoblog.utils;
 
-import software.amazon.awssdk.services.ses.SesClient;
-import software.amazon.awssdk.services.ses.model.*;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ses.SesClient;
+import software.amazon.awssdk.services.ses.model.Body;
+import software.amazon.awssdk.services.ses.model.Content;
+import software.amazon.awssdk.services.ses.model.Destination;
+import software.amazon.awssdk.services.ses.model.Message;
+import software.amazon.awssdk.services.ses.model.SendEmailRequest;
+import software.amazon.awssdk.services.ses.model.SesException;
 
 public class SESUtil {
     private final SesClient sesClient;
@@ -96,7 +101,7 @@ public class SESUtil {
         sendEmail(recipientEmail, subject, body);
     }
 
-    // Email for task processing completion
+    // Email for task processing  completion
     public void sendProcessingCompletedEmail(String recipientEmail, String photoId) {
         String subject = "Photo Blog - Processing Completed";
         String body = String.format(

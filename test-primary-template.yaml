@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Minimal template for testing SES email functionality in Photo Blog App
+
+Parameters:
+  AppName:
+    Type: String
+    Default: photo-blog-application
+    Description: Name of the application
+
+  StageName:
+    Type: String
+    Default: dev
+    Description: Stage name for the deployment
+    AllowedValues: [dev, prod]
+
+  EmailSender:
+    Type: String
+    Default: ""
+    Description: Provide Ses verified identity email
+
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: java21
+    Environment:
+      Variables:
+        PRIMARY_REGION:  eu-central-1
+        EMAIL_SENDER: !Ref EmailSender
+   
+
+Resources:
+  ImageProcessingEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.processing.ImageProcessingEmailHandler::handleRequest
+      Environment:
+        Variables:
+          PRIMARY_REGION: eu-central-1
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+
+Outputs:
+  ImageProcessingEmailFunctionArn:
+    Description: ARN of the email testing Lambda function
+    Value: !GetAtt ImageProcessingEmailFunction.Arn
+    Export:
+      Name: !Sub "${AppName}-${StageName}-image-processing-email-function-arn"
