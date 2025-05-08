@@ -1,4 +1,132 @@
 package com.photoblog.utils;
 
+import software.amazon.awssdk.services.ses.SesClient;
+import software.amazon.awssdk.services.ses.model.*;
+import software.amazon.awssdk.regions.Region;
+
 public class SESUtil {
+    private final SesClient sesClient;
+    private final String senderEmail;
+
+    public SESUtil() {
+        String region = System.getenv("PRIMARY_REGION");
+        if (region == null) {
+            throw new IllegalStateException("PRIMARY_REGION environment variable is not set");
+        }
+        this.sesClient = SesClient.builder()
+            .region(Region.of(region))
+            .build();
+
+        this.senderEmail = System.getenv("EMAIL_SENDER");
+        if (senderEmail == null) {
+            throw new IllegalStateException("EMAIL_SENDER environment variable is not set");
+        }
+    }
+
+    // Generic email sending function
+    public void sendEmail(String recipientEmail, String subject, String body) {
+        try {
+            Destination destination = Destination.builder()
+                .toAddresses(recipientEmail)
+                .build();
+
+            Content subjectContent = Content.builder()
+                .data(subject)
+                .charset("UTF-8")
+                .build();
+
+            Content htmlBody = Content.builder()
+                .data(body)
+                .charset("UTF-8")
+                .build();
+
+            Content textBody = Content.builder()
+                .data(stripHtml(body))
+                .charset("UTF-8")
+                .build();
+
+            Body emailBody = Body.builder()
+                .html(htmlBody)
+                .text(textBody)
+                .build();
+
+            Message message = Message.builder()
+                .subject(subjectContent)
+                .body(emailBody)
+                .build();
+
+            SendEmailRequest request = SendEmailRequest.builder()
+                .source(senderEmail)
+                .destination(destination)
+                .message(message)
+                .build();
+
+            sesClient.sendEmail(request);
+        } catch (SesException e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+        }
+    }
+
+    // Email for user login
+    public void sendLoginNotification(String recipientEmail, String username, String loginTime) {
+        String subject = "Photo Blog - Successful Login";
+        String body = String.format(
+            "<h2>Welcome Back, %s!</h2>" +
+            "<p>You have successfully logged into your Photo Blog account.</p>" +
+            "<p><strong>Login Time:</strong> %s</p>" +
+            "<p>If this wasn't you, please contact our support team immediately.</p>" +
+            "<p>Best regards,<br>Photo Blog Team</p>",
+            username, loginTime
+        );
+
+        sendEmail(recipientEmail, subject, body);
+    }
+
+    // Email for task processing start
+    public void sendProcessingStartedEmail(String recipientEmail, String photoId) {
+        String subject = "Photo Blog - Processing Started";
+        String body = String.format(
+            "<h2>Photo Processing Started</h2>" +
+            "<p>Your photo (ID: %s) has started processing.</p>" +
+            "<p>You will receive a notification once the processing is complete.</p>" +
+            "<p>Best regards,<br>Photo Blog Team</p>",
+            photoId
+        );
+
+        sendEmail(recipientEmail, subject, body);
+    }
+
+    // Email for task processing completion
+    public void sendProcessingCompletedEmail(String recipientEmail, String photoId) {
+        String subject = "Photo Blog - Processing Completed";
+        String body = String.format(
+            "<h2>Photo Processing Completed</h2>" +
+            "<p>Your photo (ID: %s) has been successfully processed.</p>" +
+            "<p>You can now view it in your Photo Blog gallery.</p>" +
+            "<p>Best regards,<br>Photo Blog Team</p>",
+            photoId
+        );
+
+        sendEmail(recipientEmail, subject, body);
+    }
+
+    // Email for task processing failure
+    public void sendProcessingFailedEmail(String recipientEmail, String photoId, String errorMessage) {
+        String subject = "Photo Blog - Processing Failed";
+        String body = String.format(
+            "<h2>Photo Processing Failed</h2>" +
+            "<p>We're sorry, but there was an issue processing your photo (ID: %s).</p>" +
+            "<p><strong>Error:</strong> %s</p>" +
+            "<p>Please try uploading the photo again or contact our support team.</p>" +
+            "<p>Best regards,<br>Photo Blog Team</p>",
+            photoId, errorMessage
+        );
+
+        sendEmail(recipientEmail, subject, body);
+    }
+
+    // Helper method to strip HTML for plain text email version
+    private String stripHtml(String html) {
+        return html.replaceAll("<[^>]+>", "").replaceAll("\\s+", " ").trim();
+    }
 }
