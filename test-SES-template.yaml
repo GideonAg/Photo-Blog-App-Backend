@@ -19,24 +19,35 @@ Parameters:
     Default: ""
     Description: Provide Ses verified identity email
 
-
 Globals:
   Function:
     Timeout: 30
-    MemorySize: 512
+    MemorySize: 1024
     Runtime: java21
     Environment:
       Variables:
-        PRIMARY_REGION:  eu-central-1
+        PRIMARY_REGION:  !Ref AWS::Region
         EMAIL_SENDER: !Ref EmailSender
-   
 
 Resources:
+  # Common dependencies layer for AWS SDK
+  AwsSdkLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: aws-sdk-layer
+      Description: AWS SDK Dependencies Layer
+      ContentUri: ./aws-sdk-layer
+      CompatibleRuntimes:
+        - java21
+      RetentionPolicy: Retain
+
   ImageProcessingEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.processing.ImageProcessingEmailHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           PRIMARY_REGION: eu-central-1
@@ -48,9 +59,121 @@ Resources:
                 - ses:SendRawEmail
               Resource: "*"
 
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AppName}-${StageName}-user-pool"
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: firstName
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+        - Name: lastName
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: UserPool
+    Properties:
+      ClientName: !Sub "${AppName}-${StageName}-client"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+
+  AuthApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+
+  LoginNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      # Add DeploymentPreference to force a new version
+      DeploymentPreference:
+        Enabled: true
+        Type: AllAtOnce
+      Layers:
+        - !Ref AwsSdkLayer
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - 'cognito-idp:AdminGetUser'
+              Resource: "*"
+      Events:
+        PostAuthentication:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref UserPool
+            Trigger: PostAuthentication
+
+  AuthenticationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      # Add DeploymentPreference to force a new version
+      DeploymentPreference:
+        Enabled: true
+        Type: AllAtOnce
+      Events:
+        SignIn:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApi
+            Path: /auth
+            Method: post
+      Environment:
+        Variables:
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PRIMARY_REGION: !Ref AWS::Region
+
 Outputs:
   ImageProcessingEmailFunctionArn:
     Description: ARN of the email testing Lambda function
     Value: !GetAtt ImageProcessingEmailFunction.Arn
     Export:
       Name: !Sub "${AppName}-${StageName}-image-processing-email-function-arn"
+  UserPoolId:
+    Description: ID of the Cognito User Pool
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: ID of the Cognito User Pool Client
+    Value: !Ref UserPoolClient
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com/prod"

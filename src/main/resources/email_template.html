@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Security Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .alert {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<h2>Hello {{name}},</h2>
+<p>We detected a new sign-in to your account on <strong>{{loginTime}}</strong>.</p>
+
+<div class="alert">
+    <p>If this was you, you can ignore this message. If you didn't sign in recently,
+        please change your password immediately and contact our support team.</p>
+</div>
+
+<div class="footer">
+    <p>Thank you,<br/>Your Application Team</p>
+</div>
+</body>
+</html>

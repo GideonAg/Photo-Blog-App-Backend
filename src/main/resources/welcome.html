@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Our Service</title>
+    <style>
+        /* Modern reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Header styles */
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .logo {
+            margin-bottom: 15px;
+            font-size: 32px;
+        }
+
+        .content {
+            padding: 35px 30px;
+        }
+
+        .welcome-message {
+            margin-bottom: 25px;
+        }
+
+        .welcome-message h2 {
+            color: #4b5563;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .welcome-message p {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .features {
+            background-color: #f9fafb;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .features-title {
+            font-size: 18px;
+            color: #4b5563;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .feature-list {
+            list-style-type: none;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #6b7280;
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background-color: #dbeafe;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        .cta-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .support {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 25px;
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .support p {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        .support-link {
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .social-proof {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .rating {
+            color: #eab308;
+            font-size: 20px;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .testimonial {
+            color: #6b7280;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .footer {
+            background-color: #f9fafb;
+            padding: 25px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .social-icons {
+            margin: 15px 0;
+        }
+
+        .social-icon {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background-color: #e5e7eb;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 5px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+        }
+
+        .social-icon:hover {
+            background-color: #d1d5db;
+        }
+
+        .footer-links {
+            margin: 15px 0;
+        }
+
+        .footer-link {
+            color: #6b7280;
+            text-decoration: none;
+            margin: 0 10px;
+            font-size: 13px;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        @media screen and (max-width: 550px) {
+            .container {
+                border-radius: 8px;
+            }
+
+            .header {
+                padding: 25px 15px;
+            }
+
+            .content {
+                padding: 25px 20px;
+            }
+
+            .features {
+                padding: 20px;
+            }
+
+            .button {
+                padding: 12px 24px;
+                font-size: 15px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">✉️</div>
+        <h1>Welcome to Our Service!</h1>
+        <p>Your journey to success begins now</p>
+    </div>
+    <div class="content">
+        <div class="welcome-message">
+            <h2>Hello, {{fullName}}!</h2>
+            <p>Thank you for joining our community. Your account has been successfully created and is ready to use right away.</p>
+            <p>We're excited to have you on board and can't wait to see what you'll accomplish with our tools.</p>
+        </div>
+        <div class="features">
+            <h3 class="features-title">What you can do now:</h3>
+            <ul class="feature-list">
+                <li class="feature-item"><span class="feature-icon">✓</span><span>Access our complete suite of professional tools</span></li>
+                <li class="feature-item"><span class="feature-icon">✓</span><span>Customize your profile and notification preferences</span></li>
+                <li class="feature-item"><span class="feature-icon">✓</span><span>Connect and collaborate with other community members</span></li>
+                <li class="feature-item"><span class="feature-icon">✓</span><span>Explore our premium features with your free 14-day trial</span></li>
+            </ul>
+        </div>
+        <div class="cta-container">
+            <a href="https://yourdomain.com/login" class="button">Get Started Now</a>
+        </div>
+        <div class="support">
+            <p>Have questions or need help getting started?</p>
+            <a href="https://yourdomain.com/support" class="support-link">Contact our friendly support team</a>
+        </div>
+        <div class="social-proof">
+            <div class="rating">★★★★★</div>
+            <p class="testimonial">"This service has transformed how I work. Highly recommended!"</p>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="social-icons">
+            <a href="#" class="social-icon">f</a>
+            <a href="#" class="social-icon">t</a>
+            <a href="#" class="social-icon">in</a>
+            <a href="#" class="social-icon">ig</a>
+        </div>
+        <div class="footer-links">
+            <a href="#" class="footer-link">Privacy Policy</a>
+            <a href="#" class="footer-link">Terms of Service</a>
+            <a href="#" class="footer-link">Unsubscribe</a>
+        </div>
+        <p>This email was sent to you because you created an account on our platform.</p>
+        <p>&copy; {{currentYear}} Your Company. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

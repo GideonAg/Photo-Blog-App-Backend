@@ -10,26 +10,14 @@ import software.amazon.awssdk.services.ses.model.SendEmailRequest;
 import software.amazon.awssdk.services.ses.model.SesException;
 
 public class SESUtil {
-    private final SesClient sesClient;
-    private final String senderEmail;
-
-    public SESUtil() {
-        String region = System.getenv("PRIMARY_REGION");
-        if (region == null) {
-            throw new IllegalStateException("PRIMARY_REGION environment variable is not set");
-        }
-        this.sesClient = SesClient.builder()
+    private static final String region = System.getenv("PRIMARY_REGION");
+    private static final SesClient sesClient = SesClient.builder()
             .region(Region.of(region))
             .build();
-
-        this.senderEmail = System.getenv("EMAIL_SENDER");
-        if (senderEmail == null) {
-            throw new IllegalStateException("EMAIL_SENDER environment variable is not set");
-        }
-    }
+    private static final String senderEmail = System.getenv("EMAIL_SENDER");;
 
     // Generic email sending function
-    public void sendEmail(String recipientEmail, String subject, String body) {
+    public static void sendEmail(String recipientEmail, String subject, String body) {
         try {
             Destination destination = Destination.builder()
                 .toAddresses(recipientEmail)
@@ -131,7 +119,7 @@ public class SESUtil {
     }
 
     // Helper method to strip HTML for plain text email version
-    private String stripHtml(String html) {
+    private static String stripHtml(String html) {
         return html.replaceAll("<[^>]+>", "").replaceAll("\\s+", " ").trim();
     }
 }

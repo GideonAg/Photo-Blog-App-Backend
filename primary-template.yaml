@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Primary resources for Photo Blog App with Disaster Recovery capability
 
-# Define Parameters
 Parameters:
   AppName:
     Type: String
@@ -69,6 +68,16 @@ Globals:
         BACKUP_BUCKET_ARN: !Ref BackupBucketArn
 
 Resources:
+  AwsSdkLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: aws-sdk-layer
+      Description: AWS SDK Dependencies Layer
+      ContentUri: ./aws-sdk-layer
+      CompatibleRuntimes:
+        - java17
+      RetentionPolicy: Retain
+
   StagingBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -238,13 +247,16 @@ Resources:
         - email
       Schema:
         - Name: email
+          AttributeDataType: String
           Required: true
           Mutable: true
-        - Name: given_name
-          Required: true
+        - Name: firstName
+          AttributeDataType: String
+          Required: false
           Mutable: true
-        - Name: family_name
-          Required: true
+        - Name: lastName
+          AttributeDataType: String
+          Required: false
           Mutable: true
 
   UserPoolClient:
@@ -280,12 +292,15 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
 
+  # --- ALL FUNCTIONS UPDATED BELOW ---
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -311,8 +326,10 @@ Resources:
   PhotoQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -339,8 +356,10 @@ Resources:
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -361,8 +380,10 @@ Resources:
   PhotoShareFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -383,8 +404,10 @@ Resources:
   RecycleBinQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.RecycleBinHandler::listDeletedPhotos
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -405,8 +428,10 @@ Resources:
   RecycleBinRestoreFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -427,8 +452,10 @@ Resources:
   RecycleBinDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -449,8 +476,10 @@ Resources:
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -480,8 +509,10 @@ Resources:
   ProcessingRetryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
@@ -498,8 +529,10 @@ Resources:
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.auth.WelcomeEmailHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -513,11 +546,44 @@ Resources:
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt UserPool.Arn
 
+  AuthenticationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Enabled: true
+        Type: AllAtOnce
+      Events:
+        SignIn:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApi
+            Path: /auth
+            Method: post
+      Environment:
+        Variables:
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PRIMARY_REGION: !Ref AWS::Region
+
   LoginNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Enabled: true
+        Type: AllAtOnce
+      Layers:
+        - !Ref AwsSdkLayer
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -531,8 +597,10 @@ Resources:
   UserNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -545,8 +613,10 @@ Resources:
   SystemAlertFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -559,8 +629,10 @@ Resources:
   BackupHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.disaster.BackupHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -593,8 +665,10 @@ Resources:
   RestoreHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.disaster.RestoreHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -622,8 +696,10 @@ Resources:
   CognitoBackupFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -656,8 +732,10 @@ Resources:
   Route53FailoverConfig:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.disaster.Route53FailoverHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Policies:
@@ -678,8 +756,10 @@ Resources:
   DisasterRecoveryTriggerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
       Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
+      Layers:
+        - !Ref AwsSdkLayer
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -697,7 +777,6 @@ Resources:
                 - lambda:InvokeFunction
               Resource: !GetAtt RestoreHandlerFunction.Arn
 
-  # CloudWatch and Route53 for health monitoring
   PrimaryRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -765,7 +844,6 @@ Resources:
       AlarmActions:
         - !Ref SystemAlertTopic
 
-# Outputs
 Outputs:
   ApiUrl:
     Description: URL of the API Gateway endpoint

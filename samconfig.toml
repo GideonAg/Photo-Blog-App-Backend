@@ -3,8 +3,9 @@ version = 0.1
 stack_name = "sam-app"
 resolve_s3 = true
 s3_prefix = "sam-app"
-region = "eu-central-1"
+region = "eu-west-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "AppName=\"photo-blog-application\" StageName=\"prod\""
+parameter_overrides = "AppName=\"photo-blog-application\" StageName=\"dev\" EmailSender=\"essilfiebernard85@gmail.com\""
 image_repositories = []
+disable_rollback = true
