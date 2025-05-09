@@ -229,6 +229,9 @@ Resources:
     Properties:
       QueueName: !Sub "${AppName}-${StageName}-image-processing"
       VisibilityTimeout: 300
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ProcessingRetryQueue.Arn
+        maxReceiveCount: 3
 
   ProcessingRetryQueue:
     Type: AWS::SQS::Queue
@@ -519,27 +522,12 @@ Resources:
           Properties:
             Queue: !GetAtt ImageProcessingQueue.Arn
             BatchSize: 1
-
-  ProcessingRetryFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
-      Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
-      Environment:
-        Variables:
-          IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-      Policies:
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt ImageProcessingQueue.QueueName
-      Events:
-        SQSEvent:
+        RetrySQS:
           Type: SQS
           Properties:
-            Queue: !GetAtt ProcessingRetryQueue.Arn
+            Queue: !GetAtt ProcessingRetryQueue.QueueName
             BatchSize: 1
-
+  
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
