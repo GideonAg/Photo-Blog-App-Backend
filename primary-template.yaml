@@ -53,7 +53,7 @@ Globals:
   Function:
     Timeout: 30
     MemorySize: 512
-    Runtime: java17
+    Runtime: java21
     Environment:
       Variables:
         STAGE: !Ref StageName
@@ -287,7 +287,6 @@ Resources:
         AllowHeaders: "'*'"
         AllowOrigin: !Sub "'https://${DomainName}'"
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
@@ -322,6 +321,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos
             Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   PhotoQueryFunction:
     Type: AWS::Serverless::Function
@@ -346,12 +347,16 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos
             Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
         GetPhoto:
           Type: Api
           Properties:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}
             Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
@@ -376,6 +381,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}
             Method: delete
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   PhotoShareFunction:
     Type: AWS::Serverless::Function
@@ -400,6 +407,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}/share
             Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   RecycleBinQueryFunction:
     Type: AWS::Serverless::Function
@@ -424,6 +433,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin
             Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   RecycleBinRestoreFunction:
     Type: AWS::Serverless::Function
@@ -448,6 +459,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin/{photoId}/restore
             Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   RecycleBinDeleteFunction:
     Type: AWS::Serverless::Function
@@ -472,6 +485,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin/{photoId}
             Method: delete
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
@@ -569,7 +584,44 @@ Resources:
       Environment:
         Variables:
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PRIMARY_REGION: !Ref AWS::Region
+
+  CreateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      Handler: com.photoblog.auth.CreateUserHandler::handleRequest
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+      Layers:
+        - !Ref AwsSdkLayer
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Enabled: true
+        Type: AllAtOnce
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'cognito-idp:AdminCreateUser'
+                - 'cognito-idp:AdminSetUserPassword'
+              Resource: !GetAtt UserPool.Arn
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+              Resource:
+                - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
+      Events:
+        SignUp:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApi
+            Path: /register
+            Method: post
 
   LoginNotificationFunction:
     Type: AWS::Serverless::Function
@@ -585,8 +637,15 @@ Resources:
       Layers:
         - !Ref AwsSdkLayer
       Policies:
-        - SESCrudPolicy:
-            IdentityName: !Ref DomainName
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailSender}"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
       Events:
         PostAuthentication:
           Type: Cognito

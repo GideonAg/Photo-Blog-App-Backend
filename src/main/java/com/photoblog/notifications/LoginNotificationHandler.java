@@ -2,7 +2,7 @@ package com.photoblog.notifications;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.photoblog.utils.FileLoaderUtil;
+import com.photoblog.utils.EmailTemplateLoader;
 import com.photoblog.utils.SESUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
@@ -23,11 +23,9 @@ public class LoginNotificationHandler implements RequestHandler<Map<String, Obje
     public LoginNotificationHandler() {
         String region = System.getenv("PRIMARY_REGION");
         this.cognitoClient = CognitoIdentityProviderClient.builder().region(Region.of(region)).build();
-        // Load HTML template during initialization
         try {
-            this.emailHtmlTemplate = FileLoaderUtil.loadResourceFile(EMAIL_TEMPLATE_PATH);
+            this.emailHtmlTemplate = EmailTemplateLoader.loadResourceFile(EMAIL_TEMPLATE_PATH);
         } catch (IOException e) {
-            // If loading fails, fall back to a simple template
             this.emailHtmlTemplate = "<h2>Hello {{name}},</h2><p>New login detected at {{loginTime}}.</p>";
             System.err.println("Failed to load email template: " + e.getMessage());
         }
@@ -38,7 +36,6 @@ public class LoginNotificationHandler implements RequestHandler<Map<String, Obje
         try {
             context.getLogger().log("Post Authentication event: " + event);
 
-            // Extract information from the event
             @SuppressWarnings("unchecked")
             Map<String, Object> request = (Map<String, Object>) event.get("request");
             @SuppressWarnings("unchecked")
@@ -49,16 +46,18 @@ public class LoginNotificationHandler implements RequestHandler<Map<String, Obje
             String email = null;
             String name = "User";
 
-            if (userAttributes != null && userAttributes.containsKey("email")) {
-                email = (String) userAttributes.get("email");
-                if (userAttributes.containsKey("name")) {
-                    name = (String) userAttributes.get("name");
+            if (userAttributes != null) {
+                if (userAttributes.containsKey("email"))
+                    email = (String) userAttributes.get("email");
+
+
+                if (userAttributes.containsKey("custom:firstName")) {
+                    name = (String) userAttributes.get("custom:firstName");
+                    context.getLogger().log("Found firstName in event: " + name);
                 }
             }
 
-            // If not found in event, fetch from Cognito
             if (email == null) {
-                // Get user's email
                 AdminGetUserResponse userResponse = cognitoClient.adminGetUser(
                         AdminGetUserRequest.builder()
                                 .username(username)
@@ -72,20 +71,20 @@ public class LoginNotificationHandler implements RequestHandler<Map<String, Obje
                         .map(AttributeType::value)
                         .orElseThrow(() -> new RuntimeException("User email not found"));
 
-                name = userResponse.userAttributes().stream()
-                        .filter(attr -> attr.name().equals("firstName"))
-                        .findFirst()
-                        .map(AttributeType::value)
-                        .orElse("User");
+                if ("User".equals(name)) {
+                    name = userResponse.userAttributes().stream()
+                            .filter(attr -> attr.name().equals("custom:firstName"))
+                            .findFirst()
+                            .map(AttributeType::value)
+                            .orElse("User");
+                }
             }
 
-            // Send login notification email
             sendLoginNotificationEmail(email, name);
 
-            context.getLogger().log("Successfully sent login notification email to " + email);
+            context.getLogger().log("Successfully sent login notification email to " + email + " with name: " + name);
         } catch (Exception e) {
             context.getLogger().log("Error sending login notification: " + e.getMessage());
-            e.printStackTrace();
         }
 
         return event;
@@ -98,12 +97,11 @@ public class LoginNotificationHandler implements RequestHandler<Map<String, Obje
 
         String subject = "Security Alert: New Login Detected";
 
-        // Replace placeholders in HTML template
         String htmlBody = emailHtmlTemplate
                 .replace("{{name}}", name)
-                .replace("{{loginTime}}", formattedDateTime);
+                .replace("{{loginTime}}", formattedDateTime)
+                .replace("{{currentYear}}", String.valueOf(java.time.Year.now().getValue()));
 
         SESUtil.sendEmail(email, subject, htmlBody);
     }
-
 }
