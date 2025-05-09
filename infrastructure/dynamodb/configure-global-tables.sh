@@ -68,7 +68,7 @@ for TABLE_NAME in $TABLES; do
   fi
 
   # Enable PITR for PhotosTable in both regions
-  if [ "$TABLE_NAME" = "photo-blog-application-dev-photos" ]; then
+  if [ "$TABLE_NAME" = "photo-blog-application-group1-dev-photos" ]; then
     for REGION in "$PRIMARY_REGION" "$BACKUP_REGION"; do
       echo "Enabling PITR for $TABLE_NAME in $REGION..."
       aws dynamodb update-continuous-backups \

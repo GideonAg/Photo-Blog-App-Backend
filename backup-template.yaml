@@ -5,7 +5,7 @@ Description: Backup resources for Photo Blog App Disaster Recovery in eu-central
 Parameters:
   AppName:
     Type: String
-    Default: photo-blog-application
+    Default: photo-blog-application-group1
     Description: Name of the application
   StageName:
     Type: String
