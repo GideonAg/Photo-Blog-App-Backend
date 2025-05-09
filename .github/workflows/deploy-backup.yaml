@@ -25,7 +25,7 @@ jobs:
             --template-file backup-template.yaml \
             --stack-name photo-blog-backup \
             --parameter-overrides \
-              AppName=photo-blog \
+              AppName=photo-blog-application-group1 \
               StageName=dev \
               PrimaryRegion=eu-west-1 \
               PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
