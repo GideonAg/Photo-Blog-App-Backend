@@ -34,14 +34,12 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
 
 
             var authResponse = authService.login(request.email(), request.password());
-            // Create response
             SignInResponse response = SignInResponse.builder()
                     .success(true)
                     .message(authResponse.get("message"))
                     .idToken(authResponse.get("idToken"))
                     .build();
 
-            // Return API Gateway response
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");
             headers.put("Access-Control-Allow-Origin", "*");
@@ -52,7 +50,6 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
                     .withBody(mapper.writeValueAsString(response));
 
         } catch (Exception e) {
-            // Handle errors
             SignInResponse response = SignInResponse.builder()
                     .success(false)
                     .message("Authentication failed: " + e.getMessage())
