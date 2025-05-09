@@ -93,5 +93,57 @@ public class S3Util {
         }
     }
 
+    /**
+     * Generate a presigned URL for an S3 object (3-hour expiry).
+     * @param getObjectRequest The S3 get object request.
+     * @return Presigned URL.
+     */
+    private String generatePresignedUrl(GetObjectRequest getObjectRequest) {
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofHours(3))
+                .getObjectRequest(getObjectRequest)
+                .build();
+        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+        return presignedRequest.url().toString();
+    }
+
+    /**
+     * Apply bucket policy to restrict access to frontend domain.
+     */
+    public void applyBucketPolicy() {
+        String domainName = System.getenv("DOMAIN_NAME");
+        if (domainName == null) {
+            throw new IllegalStateException("DOMAIN_NAME environment variable is not set");
+        }
+        String policy = """
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "s3:GetObject",
+                            "Resource": "arn:aws:s3:::%s/*",
+                            "Condition": {
+                                "StringEquals": {
+                                    "aws:Referer": "https://%s"
+                                }
+                            }
+                        }
+                    ]
+                }
+                """.formatted(mainBucket, domainName);
+
+        try {
+            PutBucketPolicyRequest policyRequest = PutBucketPolicyRequest.builder()
+                    .bucket(mainBucket)
+                    .policy(policy)
+                    .build();
+            s3Client.putBucketPolicy(policyRequest);
+        } catch (S3Exception e) {
+            throw new RuntimeException("Failed to apply bucket policy: " + e.getMessage(), e);
+        }
+    }
+
 
 }
