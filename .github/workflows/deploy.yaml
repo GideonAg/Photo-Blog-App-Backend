@@ -60,13 +60,7 @@ jobs:
 
       - name: SAM Deploy
         run: |
-          TEMPLATE_FILE=$(find .aws-sam -name "backup-template.yaml" | head -n 1)
-          if [ -z "$TEMPLATE_FILE" ]; then
-            echo "Error: Could not find any template file in .aws-sam directory"
-            exit 1
-          fi
-          
-          echo "Using template file: $TEMPLATE_FILE"
+          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
           
           sam deploy \
             --template-file "$TEMPLATE_FILE" \
@@ -193,20 +187,7 @@ jobs:
 
       - name: Deploy CloudFormation stack
         run: |
-          # Find the template file
-          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
-          if [ -z "$TEMPLATE_FILE" ]; then
-            echo "Could not find template.yaml, looking for primary-template.yaml"
-            TEMPLATE_FILE=$(find .aws-sam -name "primary-template.yaml" | head -n 1)
-          fi
-          
-          # Check if template file was found
-          if [ -z "$TEMPLATE_FILE" ]; then
-            echo "Error: Could not find any template file in .aws-sam directory"
-            exit 1
-          fi
-          
-          echo "Using template file: $TEMPLATE_FILE"
+          TEMPLATE_FILE=".aws-sam/build/template.yaml"
           
           sam deploy \
             --template-file "$TEMPLATE_FILE" \
