@@ -36,20 +36,6 @@ jobs:
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
 
-      - name: Debug - List files
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Checking if backup-template.yaml exists:"
-          if [ -f "backup-template.yaml" ]; then
-            echo "File exists"
-            cat backup-template.yaml | head -n 10
-          else
-            echo "File does not exist"
-          fi
-
       - name: SAM Build
         run: sam build -t backup-template.yaml
 
@@ -74,12 +60,7 @@ jobs:
 
       - name: SAM Deploy
         run: |
-          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
-          if [ -z "$TEMPLATE_FILE" ]; then
-            echo "Could not find template.yaml, looking for backup-template.yaml"
-            TEMPLATE_FILE=$(find .aws-sam -name "backup-template.yaml" | head -n 1)
-          fi
-          
+          TEMPLATE_FILE=$(find .aws-sam -name "backup-template.yaml" | head -n 1)
           if [ -z "$TEMPLATE_FILE" ]; then
             echo "Error: Could not find any template file in .aws-sam directory"
             exit 1
