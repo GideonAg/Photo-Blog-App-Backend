@@ -55,7 +55,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: ["*"]
             AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
-            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -104,7 +104,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: ["*"]
             AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
-            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:

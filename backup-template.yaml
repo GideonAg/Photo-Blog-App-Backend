@@ -52,7 +52,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: ["*"]
             AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
-            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
   MainBucket:
@@ -65,7 +65,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: ["*"]
             AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
-            AllowedOrigins: !Sub ["https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
