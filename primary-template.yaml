@@ -53,8 +53,8 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: ["*"]
-            AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
+          - AllowedHeaders: "'*'"
+            AllowedMethods: "'*'"
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
@@ -102,8 +102,8 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: ["*"]
-            AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
+          - AllowedHeaders: "'*'"
+            AllowedMethods: "'*'"
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
