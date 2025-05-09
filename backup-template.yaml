@@ -220,8 +220,8 @@ Resources:
     Properties:
       StageName: !Ref StageName
       Cors:
-        AllowMethods: "'*'"
-        AllowHeaders: "'*'"
+        AllowMethods: "'GET,POST,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: !Sub "https://${DomainName}"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
