@@ -78,13 +78,16 @@ Resources:
         - email
       Schema:
         - Name: email
+          AttributeDataType: String
           Required: true
           Mutable: true
-        - Name: given_name
-          Required: true
+        - Name: firstName
+          AttributeDataType: String
+          Required: false
           Mutable: true
-        - Name: family_name
-          Required: true
+        - Name: lastName
+          AttributeDataType: String
+          Required: false
           Mutable: true
 
   BackupUserPoolClient:

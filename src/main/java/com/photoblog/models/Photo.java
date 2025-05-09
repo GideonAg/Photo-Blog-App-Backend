@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -35,7 +34,8 @@ public class Photo {
     private String imageName;
 
     @DynamoDBAttribute
-    private String status;
+    @DynamoDBTypeConvertedEnum
+    private Status status;
 
     @DynamoDBAttribute
     private String createdAt;
@@ -45,4 +45,9 @@ public class Photo {
 
     @DynamoDBAttribute
     private String versionId;
+
+    public enum Status{
+        ACTIVE,
+        DELETED
+    }
 }
