@@ -21,13 +21,6 @@ jobs:
       - name: Build with Maven
         run: mvn clean package
 
-      - name: Prepare AWS SDK Layer
-        run: |
-          mkdir -p aws-sdk-layer/java/lib
-          cd aws-sdk-layer
-          mvn clean package
-          cp -r target/java/lib/* java/lib/
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
