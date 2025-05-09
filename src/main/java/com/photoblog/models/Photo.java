@@ -34,6 +34,7 @@ public class Photo {
     private String imageName;
 
     @DynamoDBAttribute
+    @DynamoDBTypeConvertedEnum
     private String status;
 
     @DynamoDBAttribute
@@ -44,4 +45,9 @@ public class Photo {
 
     @DynamoDBAttribute
     private String versionId;
+
+    public enum Status{
+        ACTIVE,
+        DELETED
+    }
 }
