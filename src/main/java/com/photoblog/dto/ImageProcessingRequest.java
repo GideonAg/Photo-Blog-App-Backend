@@ -1,9 +1,6 @@
 package com.photoblog.dto;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 
 import java.io.File;
 import java.util.Objects;
@@ -23,6 +20,8 @@ import java.util.Objects;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(exclude = "inputFile")
 @ToString(exclude = "inputFile")
 public class ImageProcessingRequest {
