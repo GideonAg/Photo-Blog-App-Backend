@@ -18,6 +18,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Build with Maven
+        run: mvn clean package
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -70,7 +73,7 @@ jobs:
       - name: Deploy CloudFormation stack
         run: |
           sam deploy \
-            --template .aws-sam/build/template.yaml \
+            --template-file .aws-sam/build/primary-template.yaml \
             --stack-name photo-blog-primary \
             --parameter-overrides \
               AppName=photo-blog-application-group1 \
