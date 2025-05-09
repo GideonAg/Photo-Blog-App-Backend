@@ -124,15 +124,15 @@ Resources:
       Schema:
         - Name: email
           AttributeDataType: String
-          Required: true
+          Required: No
           Mutable: true
         - Name: firstName
           AttributeDataType: String
-          Required: true
+          Required: No
           Mutable: true
         - Name: lastName
           AttributeDataType: String
-          Required: true
+          Required: No
           Mutable: true
 
   BackupUserPoolClient:

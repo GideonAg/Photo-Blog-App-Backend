@@ -208,13 +208,16 @@ Resources:
         - email
       Schema:
         - Name: email
-          Required: true
+          AttributeDataType: String
+          Required: No
           Mutable: true
         - Name: firstName
-          Required: true
+          AttributeDataType: String
+          Required: No
           Mutable: true
         - Name: lastName
-          Required: true
+          AttributeDataType: String
+          Required: No
           Mutable: true
 
   UserPoolClient:
