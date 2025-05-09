@@ -40,6 +40,10 @@ Parameters:
     Type: String
     Description: ID of the backup Cognito user pool client
     Default: ""
+  BackupApiId:
+    Type: String
+    Description: ID of the backup API Gateway in the backup region
+    Default: ""
 
 Resources:
   StagingBucket:
@@ -771,7 +775,7 @@ Resources:
                 - s3:ListBucket
               Resource:
                 - !Ref BackupBucketArn
-                - !Sub "${BackupBucketArn}/*"
+                - !Sub SED "${BackupBucketArn}/*"
       Events:
         ScheduledEvent:
           Type: Schedule
@@ -902,7 +906,7 @@ Resources:
         - Name: !Sub "api.${DomainName}"
           Type: A
           AliasTarget:
-            DNSName: !Sub "${PhotoBlogApiBackup}.execute-api.${BackupRegion}.amazonaws.com"
+            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
             HostedZoneId: !Sub "Z1U9ULNL0V5AJ3" # API Gateway hosted zone ID for eu-central-1
             EvaluateTargetHealth: false
           SetIdentifier: "backup"
