@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.SNSUtil;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
 import software.amazon.awssdk.services.cloudwatch.model.Metric;
@@ -12,6 +13,7 @@ import software.amazon.awssdk.services.cloudwatch.model.MetricStat;
 import software.amazon.awssdk.services.health.HealthClient;
 import software.amazon.awssdk.services.health.model.DescribeEventsRequest;
 import software.amazon.awssdk.services.health.model.Event;
+import software.amazon.awssdk.services.health.model.EventStatusCode;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import java.time.Instant;
@@ -94,24 +96,22 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
     }
 
     private boolean checkPrimaryRegionHealth(Context context) {
-        // Check AWS Health API for region outages
         try {
             DescribeEventsRequest eventsRequest = DescribeEventsRequest.builder()
                     .filter(f -> f.regions(Collections.singletonList(primaryRegion))
-                            .eventStatusCodes("open", "upcoming"))
+                            .eventStatusCodes(EventStatusCode.OPEN, EventStatusCode.UPCOMING))
                     .build();
             for (Event event : healthClient.describeEvents(eventsRequest).events()) {
                 if (event.region().equals(primaryRegion) && event.service().equals("AWS")) {
                     context.getLogger().log("AWS Health event detected: " + event.eventTypeCode());
-                    return false; // Region outage detected
+                    return false;
                 }
             }
         } catch (Exception e) {
             context.getLogger().log("Error checking AWS Health API: " + e.getMessage());
-            return false; // Assume unhealthy if Health API fails
+            return false;
         }
 
-        // Check API Gateway 5XX errors in primary region
         try {
             Instant endTime = Instant.now();
             Instant startTime = endTime.minus(5, ChronoUnit.MINUTES);
@@ -142,14 +142,14 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     .sum();
             if (errorCount > 10) {
                 context.getLogger().log("API Gateway 5XX errors detected: " + errorCount);
-                return false; // High error rate indicates failure
+                return false;
             }
         } catch (Exception e) {
             context.getLogger().log("Error checking API Gateway metrics: " + e.getMessage());
-            return false; // Assume unhealthy if metrics fail
+            return false;
         }
 
-        return true; // All checks passed
+        return true;
     }
 
     private void invokeDisasterRecoveryTrigger(Context context) throws Exception {
@@ -158,7 +158,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
         String payload = objectMapper.writeValueAsString(triggerInput);
         InvokeRequest invokeRequest = InvokeRequest.builder()
                 .functionName(triggerFunctionArn)
-                .payload(payload)
+                .payload(SdkBytes.fromUtf8String(payload))
                 .build();
         lambdaClient.invoke(invokeRequest);
         context.getLogger().log("Invoked DisasterRecoveryTriggerFunction: " + triggerFunctionArn);

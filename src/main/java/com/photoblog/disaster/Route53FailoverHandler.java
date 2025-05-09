@@ -29,7 +29,6 @@ public class Route53FailoverHandler implements RequestHandler<Map<String, String
                 return response;
             }
 
-            // Find hosted zone for domain
             String hostedZoneId = null;
             ListHostedZonesRequest listZonesRequest = ListHostedZonesRequest.builder().build();
             for (var zone : route53Client.listHostedZones(listZonesRequest).hostedZones()) {
@@ -44,14 +43,12 @@ public class Route53FailoverHandler implements RequestHandler<Map<String, String
                 return response;
             }
 
-            // Construct backup API Gateway URL
             String backupApiUrl = input.getOrDefault("backupApiUrl",
                     String.format("https://%s.execute-api.%s.amazonaws.com/%s",
                             input.getOrDefault("apiId", "backup-api"),
                             backupRegion,
                             System.getenv("STAGE")));
 
-            // Update Route53 record
             ResourceRecordSet recordSet = ResourceRecordSet.builder()
                     .name(domainName)
                     .type("CNAME")

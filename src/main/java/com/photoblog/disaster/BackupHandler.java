@@ -35,7 +35,6 @@ public class BackupHandler implements RequestHandler<Map<String, String>, Map<St
         boolean backupSuccessful = true;
 
         try {
-            // Verify S3 bucket replication
             GetBucketReplicationRequest replicationRequest = GetBucketReplicationRequest.builder()
                     .bucket(mainBucket)
                     .build();
@@ -49,7 +48,6 @@ public class BackupHandler implements RequestHandler<Map<String, String>, Map<St
                 backupSuccessful = false;
             }
 
-            // Verify BackupBucket contents in eu-central-1
             String backupBucket = backupBucketArn.replace("arn:aws:s3:::", "");
             ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
                     .bucket(backupBucket)
@@ -64,7 +62,6 @@ public class BackupHandler implements RequestHandler<Map<String, String>, Map<St
                 context.getLogger().log("Verified " + objectCount + " objects in BackupBucket: " + backupBucket);
             }
 
-            // Enable DynamoDB PITR
             UpdateContinuousBackupsRequest pitrRequest = UpdateContinuousBackupsRequest.builder()
                     .tableName(photosTable)
                     .pointInTimeRecoverySpecification(PointInTimeRecoverySpecification.builder()
@@ -75,7 +72,6 @@ public class BackupHandler implements RequestHandler<Map<String, String>, Map<St
             response.put("pitrStatus", PointInTimeRecoveryStatus.ENABLED.toString());
             context.getLogger().log("DynamoDB PITR enabled for table: " + photosTable);
 
-            // Verify DynamoDB global table replica in eu-central-1
             DescribeTableRequest describeRequest = DescribeTableRequest.builder()
                     .tableName(photosTable)
                     .build();
@@ -93,7 +89,6 @@ public class BackupHandler implements RequestHandler<Map<String, String>, Map<St
                 backupSuccessful = false;
             }
 
-            // Notify admins if backup issues detected
             if (!backupSuccessful) {
                 Map<String, String> alertMessage = new HashMap<>();
                 alertMessage.put("event", "backup_issue");

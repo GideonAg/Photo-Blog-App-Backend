@@ -70,7 +70,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
 
     private Map<String, String> handleBackup(Context context, Map<String, String> response) {
         try {
-            // List users from primary UserPool
             ListUsersRequest listUsersRequest = ListUsersRequest.builder()
                     .userPoolId(primaryUserPoolId)
                     .build();
@@ -94,7 +93,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
                         .map(attr -> attr.value())
                         .orElse("");
 
-                // Save to CognitoBackupTable
                 Map<String, AttributeValue> item = new HashMap<>();
                 item.put("id", AttributeValue.builder().s(userId).build());
                 item.put("email", AttributeValue.builder().s(email).build());
@@ -106,7 +104,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
                         .build();
                 dynamoDbClient.putItem(putItemRequest);
 
-                // Create user in BackupUserPool
                 try {
                     AdminCreateUserRequest createUserRequest = AdminCreateUserRequest.builder()
                             .userPoolId(backupUserPoolId)
@@ -141,7 +138,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
 
     private Map<String, String> handleRestore(Context context, Map<String, String> response) {
         try {
-            // Scan CognitoBackupTable
             ScanRequest scanRequest = ScanRequest.builder()
                     .tableName(cognitoBackupTable)
                     .build();
@@ -155,7 +151,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
                 String familyName = item.get("family_name").s();
 
                 try {
-                    // Create user in BackupUserPool
                     AdminCreateUserRequest createUserRequest = AdminCreateUserRequest.builder()
                             .userPoolId(backupUserPoolId)
                             .username(userId)
@@ -172,7 +167,6 @@ public class CognitoBackupHandler implements RequestHandler<Map<String, String>,
                             .build();
                     backupCognitoClient.adminCreateUser(createUserRequest);
 
-                    // Set temporary password
                     AdminSetUserPasswordRequest setPasswordRequest = AdminSetUserPasswordRequest.builder()
                             .userPoolId(backupUserPoolId)
                             .username(userId)

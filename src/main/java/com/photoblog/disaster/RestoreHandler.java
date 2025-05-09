@@ -51,7 +51,6 @@ public class RestoreHandler implements RequestHandler<Map<String, String>, Map<S
                 return response;
             }
 
-            // Validate MainBucket region
             GetBucketLocationRequest locationRequest = GetBucketLocationRequest.builder()
                     .bucket(mainBucket)
                     .build();
@@ -63,7 +62,6 @@ public class RestoreHandler implements RequestHandler<Map<String, String>, Map<S
                 return response;
             }
 
-            // Sync S3 objects from BackupBucket to MainBucket in eu-central-1
             String backupBucket = backupBucketArn.replace("arn:aws:s3:::", "");
             ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
                     .bucket(backupBucket)
@@ -103,7 +101,6 @@ public class RestoreHandler implements RequestHandler<Map<String, String>, Map<S
                 context.getLogger().log("Copied " + objectsCopied + " objects from " + backupBucket + " to " + mainBucket);
             }
 
-            // Verify PhotosTable global table replica in eu-central-1
             DescribeTableRequest photosTableRequest = DescribeTableRequest.builder()
                     .tableName(photosTable)
                     .build();
@@ -121,7 +118,6 @@ public class RestoreHandler implements RequestHandler<Map<String, String>, Map<S
                 restoreSuccessful = false;
             }
 
-            // Verify CognitoBackupTable global table replica in eu-central-1
             DescribeTableRequest cognitoTableRequest = DescribeTableRequest.builder()
                     .tableName(cognitoBackupTable)
                     .build();
@@ -139,7 +135,6 @@ public class RestoreHandler implements RequestHandler<Map<String, String>, Map<S
                 restoreSuccessful = false;
             }
 
-            // Notify admins via SNS
             Map<String, String> snsMessage = new HashMap<>();
             snsMessage.put("event", restoreSuccessful ? "restoration_completed" : "restoration_issue");
             snsMessage.put("timestamp", Instant.now().toString());
