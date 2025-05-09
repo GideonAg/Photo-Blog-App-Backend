@@ -364,7 +364,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
-      Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Handler: com.photoblog.photos.DeletePhotoHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
       Environment:
