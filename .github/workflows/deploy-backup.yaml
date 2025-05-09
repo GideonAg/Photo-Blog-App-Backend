@@ -86,7 +86,7 @@ jobs:
             --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-backup \
             --parameter-overrides \
-              AppName=photo-blog-application-group1 \
+              AppName=photo-blog-group1 \
               StageName=dev \
               PrimaryRegion=eu-central-1 \
               PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \

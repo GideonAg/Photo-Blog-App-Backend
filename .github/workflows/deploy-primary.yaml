@@ -153,7 +153,7 @@ jobs:
             --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-primary \
             --parameter-overrides \
-              AppName=photo-blog-application-group1 \
+              AppName=photo-blog-group1 \
               StageName=dev \
               BackupRegion=eu-central-1 \
               BackupBucketArn=${{ env.BACKUP_BUCKET_ARN }} \

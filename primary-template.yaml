@@ -5,7 +5,7 @@ Description: Primary resources for Photo Blog App with Disaster Recovery capabil
 Parameters:
   AppName:
     Type: String
-    Default: photo-blog-application-group1
+    Default: photo-blog-group1
     Description: Name of the application
   StageName:
     Type: String
