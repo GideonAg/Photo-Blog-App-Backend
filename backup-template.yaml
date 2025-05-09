@@ -123,16 +123,13 @@ Resources:
         - email
       Schema:
         - Name: email
-          AttributeDataType: String
           Required: true
           Mutable: true
         - Name: firstName
-          AttributeDataType: String
           Required: true
           Mutable: true
         - Name: lastName
           Required: true
-          AttributeDataType: String
           Mutable: true
 
   BackupUserPoolClient:
