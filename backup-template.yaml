@@ -52,7 +52,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: "'*'"
             AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
-            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
   MainBucket:
@@ -65,7 +65,7 @@ Resources:
         CorsRules:
           - AllowedHeaders: "'*'"
             AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
-            AllowedOrigins: !Sub ["https://${DomainName}"]
+            AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -223,7 +223,7 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: !Sub "'https://${DomainName}'"
+        AllowOrigin: !Sub "https://${DomainName}"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
