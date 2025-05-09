@@ -43,7 +43,6 @@
       <version>3.11.1</version>
     </dependency>
 
-    <!-- Mark AWS SDK dependencies as provided -->
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-dynamodb</artifactId>
@@ -82,14 +81,12 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- URL connection client also provided by layer -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
       <scope>provided</scope>
     </dependency>
 
-    <!-- Keep these direct dependencies -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
@@ -118,7 +115,6 @@
 
   <build>
     <plugins>
-      <!-- Add maven-compiler-plugin to properly configure Lombok -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -154,7 +150,6 @@
             </filter>
           </filters>
           <minimizeJar>true</minimizeJar>
-          <!-- Force the Maven Shade Plugin to use the right transformer for Java 21 -->
           <transformers>
             <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
           </transformers>
@@ -167,7 +162,6 @@
             </goals>
           </execution>
         </executions>
-        <!-- Add the dependencies needed for Java 21 support -->
         <dependencies>
           <dependency>
             <groupId>org.ow2.asm</groupId>
