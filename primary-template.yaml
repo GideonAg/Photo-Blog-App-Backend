@@ -54,7 +54,7 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: "'*'"
-            AllowedMethods: "'*'"
+            AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
@@ -103,7 +103,7 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: "'*'"
-            AllowedMethods: "'*'"
+            AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
