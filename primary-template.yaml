@@ -67,6 +67,7 @@ Globals:
         STAGING_BUCKET: !Ref StagingBucket
         MAIN_BUCKET: !Ref MainBucket
         BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+        SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
 
 Resources:
   StagingBucket:
@@ -573,6 +574,8 @@ Resources:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SystemAlertTopic.TopicName
         - Statement:
             - Effect: Allow
               Action:
@@ -603,9 +606,12 @@ Resources:
           BACKUP_REGION: !Ref BackupRegion
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CognitoBackupTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
         - Statement:
@@ -613,6 +619,7 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:ListBucket
+                - s3:CopyObject
               Resource:
                 - !Ref BackupBucketArn
                 - !Sub "${BackupBucketArn}/*"
