@@ -1,7 +1,7 @@
 {
   "GlobalTables": [
     {
-      "TableName": "photo-blog-application-dev-photos",
+      "TableName": "photo-blog-dev-photos",
       "PrimaryRegion": "eu-west-1",
       "ReplicaRegions": [
         "eu-central-1"
@@ -9,7 +9,7 @@
       "GlobalTableVersion": "2019.11.21"
     },
     {
-      "TableName": "photo-blog-application-dev-cognito-backup",
+      "TableName": "photo-blog-dev-cognito-backup",
       "PrimaryRegion": "eu-west-1",
       "ReplicaRegions": [
         "eu-central-1"
