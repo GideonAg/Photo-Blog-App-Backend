@@ -53,9 +53,10 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: '*'
-            AllowedMethods: 'GET,POST,DELETE,OPTIONS'
-            AllowedOrigins: !Sub "https://${DomainName}"
+          - AllowedHeaders: [ !Sub '*' ]
+            AllowedMethods: [ GET, POST, DELETE, OPTIONS ]
+            AllowedOrigins: [ !Sub '*' ]
+#            AllowedOrigins: [!Sub "https://${DomainName}"]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -102,9 +103,10 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: '*'
-            AllowedMethods: 'GET,POST,DELETE,OPTIONS'
-            AllowedOrigins: !Sub "https://${DomainName}"
+          - AllowedHeaders: [ !Sub '*' ]
+            AllowedMethods: [ GET, POST, DELETE, OPTIONS ]
+            AllowedOrigins: [ !Sub '*' ]
+#            AllowedOrigins: [!Sub "https://${DomainName}"]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
