@@ -53,8 +53,8 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: "'*'"
-            AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
+          - AllowedHeaders: '*'
+            AllowedMethods: 'GET,POST,DELETE,OPTIONS'
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
 
@@ -102,8 +102,8 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: "'*'"
-            AllowedMethods: "'GET,POST,DELETE,OPTIONS'"
+          - AllowedHeaders: '*'
+            AllowedMethods: 'GET,POST,DELETE,OPTIONS'
             AllowedOrigins: !Sub "https://${DomainName}"
             MaxAge: 3600
       LifecycleConfiguration:
@@ -873,17 +873,17 @@ Resources:
               Resource: !GetAtt RestoreHandlerFunction.Arn
       Events:
         AlarmTrigger:
-          Type: CloudWatchAlarm
+          Type: SNS
           Properties:
-            AlarmName: !Ref PrimaryRegionHealthAlarm
+            Topic: !Ref SystemAlertTopic
         ApiGatewayTrigger:
-          Type: CloudWatchAlarm
+          Type: SNS
           Properties:
-            AlarmName: !Ref ApiGatewayAlarm
+            Topic: !Ref SystemAlertTopic
         Route53Trigger:
-          Type: CloudWatchAlarm
+          Type: SNS
           Properties:
-            AlarmName: !Ref Route53HealthAlarm
+            Topic: !Ref SystemAlertTopic
 
   Route53FailoverConfig:
     Type: AWS::Route53::RecordSetGroup
