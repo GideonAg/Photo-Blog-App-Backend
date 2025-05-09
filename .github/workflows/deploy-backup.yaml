@@ -31,8 +31,31 @@ jobs:
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
 
+      - name: Debug - List files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -la
+          echo "Checking if backup-template.yaml exists:"
+          if [ -f "backup-template.yaml" ]; then
+            echo "File exists"
+            cat backup-template.yaml | head -n 10
+          else
+            echo "File does not exist"
+          fi
+
       - name: SAM Build
         run: sam build -t backup-template.yaml
+
+      - name: Debug - Check build output
+        run: |
+          echo "Checking .aws-sam directory:"
+          ls -la .aws-sam/
+          echo "Checking build directory:"
+          ls -la .aws-sam/build/
+          echo "Checking template file:"
+          find .aws-sam -name "*.yaml"
 
       - name: Create S3 Bucket if not exists
         run: |
@@ -46,8 +69,21 @@ jobs:
 
       - name: SAM Deploy
         run: |
+          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
+          if [ -z "$TEMPLATE_FILE" ]; then
+            echo "Could not find template.yaml, looking for backup-template.yaml"
+            TEMPLATE_FILE=$(find .aws-sam -name "backup-template.yaml" | head -n 1)
+          fi
+          
+          if [ -z "$TEMPLATE_FILE" ]; then
+            echo "Error: Could not find any template file in .aws-sam directory"
+            exit 1
+          fi
+          
+          echo "Using template file: $TEMPLATE_FILE"
+          
           sam deploy \
-            --template-file .aws-sam/build/backup-template.yaml \
+            --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-backup \
             --parameter-overrides \
               AppName=photo-blog-application-group1 \
