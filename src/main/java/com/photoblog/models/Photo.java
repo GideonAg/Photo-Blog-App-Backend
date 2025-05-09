@@ -35,7 +35,7 @@ public class Photo {
 
     @DynamoDBAttribute
     @DynamoDBTypeConvertedEnum
-    private String status;
+    private Status status;
 
     @DynamoDBAttribute
     private String createdAt;
