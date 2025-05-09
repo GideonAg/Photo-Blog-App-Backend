@@ -3,14 +3,6 @@ name: Deploy Primary Region
 on:
   push:
     branches: [ main, dev ]
-    paths:
-      - 'primary-template.yaml'
-      - '.github/workflows/deploy-primary.yaml'
-  workflow_run:
-    workflows: ["Deploy Backup Region"]
-    types:
-      - completed
-  workflow_dispatch:
 
 jobs:
   deploy:
