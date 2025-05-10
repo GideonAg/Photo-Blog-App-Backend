@@ -1,0 +1,236 @@
+name: Deploy Photo Blog (Backup & Primary)
+
+on:
+  push:
+    branches: [ main, dev ]
+
+jobs:
+  deploy-backup:
+    name: Deploy Backup Region
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      backup_bucket_arn: ${{ steps.export-resources.outputs.backup_bucket_arn }}
+      backup_user_pool_id: ${{ steps.export-resources.outputs.backup_user_pool_id }}
+      backup_user_pool_client_id: ${{ steps.export-resources.outputs.backup_user_pool_client_id }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build JAR with Maven
+        run: mvn clean package
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: SAM Build
+        run: sam build -t backup-template.yaml
+
+      - name: Debug - Check build output
+        run: |
+          echo "Checking .aws-sam directory:"
+          ls -la .aws-sam/
+          echo "Checking build directory:"
+          ls -la .aws-sam/build/
+          echo "Checking template file:"
+          find .aws-sam -name "*.yaml"
+
+      - name: Create S3 Bucket if not exists
+        run: |
+          BUCKET_NAME="my-photo-blog-backup-deployment-buckets"
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket exists"
+          else
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region eu-central-1 \
+              --create-bucket-configuration LocationConstraint=eu-central-1
+          fi
+
+      - name: SAM Deploy
+        run: |
+          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
+          
+          set +e
+          OUTPUT=$(sam deploy \
+            --template-file "$TEMPLATE_FILE" \
+            --stack-name photo-blog-backup \
+            --parameter-overrides \
+              AppName=photo-blog-group1 \
+              StageName=dev \
+              PrimaryRegion=eu-central-1 \
+              PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset \
+            --s3-bucket my-photo-blog-backup-deployment-buckets 2>&1)
+          EXIT_CODE=$?
+          set -e
+          
+          if echo "$OUTPUT" | grep -q "No changes to deploy. Stack photo-blog-backup is up to date"; then
+            echo "Stack is up to date, proceeding with workflow"
+          elif [ $EXIT_CODE -ne 0 ]; then
+            echo "SAM deploy failed with error:"
+            echo "$OUTPUT"
+            exit $EXIT_CODE
+          else
+            echo "SAM deploy completed successfully"
+          fi
+
+      - name: Wait for Stack Completion
+        run: |
+          echo "Waiting for photo-blog-backup stack to complete..."
+          aws cloudformation wait stack-create-complete --stack-name photo-blog-backup --region eu-central-1 || \
+          aws cloudformation wait stack-update-complete --stack-name photo-blog-backup --region eu-central-1 || \
+          echo "Stack already exists or is updating, checking status..."
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "NOT_FOUND")
+          if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
+            echo "Stack is not in a valid state: $STACK_STATUS"
+            aws cloudformation describe-stack-events --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+          echo "Stack deployment completed"
+
+      - name: Export backup resources
+        id: export-resources
+        run: |
+          echo "Retrieving stack outputs..."
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].StackStatus" --output text)
+          if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
+            echo "Stack is not in a valid state: $STACK_STATUS"
+            aws cloudformation describe-stack-events --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+
+          # Log all stack outputs for debugging
+          echo "All stack outputs:"
+          aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].Outputs" --output json
+
+          # Retrieve outputs
+          BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupBucketArn'].OutputValue" \
+            --output text || echo "")
+          
+          BACKUP_USER_POOL_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolId'].OutputValue" \
+            --output text || echo "")
+          
+          BACKUP_USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
+            --output text || echo "")
+          
+          # Log retrieved values
+          echo "Retrieved outputs:"
+          echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
+          echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
+          echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
+
+          # Check for missing outputs
+          MISSING_OUTPUTS=""
+          [ -z "$BACKUP_BUCKET_ARN" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupBucketArn"
+          [ -z "$BACKUP_USER_POOL_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolId"
+          [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolClientId"
+
+          if [ -n "$MISSING_OUTPUTS" ]; then
+            echo "ERROR: Failed to retrieve the following outputs:$MISSING_OUTPUTS"
+            aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+
+          # Set outputs
+          echo "Setting outputs for GitHub Actions:"
+          echo "backup_bucket_arn=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_id=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_client_id=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          
+          # For debugging only
+          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
+          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
+          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
+
+  deploy-primary:
+    name: Deploy Primary Region
+    runs-on: ubuntu-latest
+    environment: production
+    needs: deploy-backup
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build with Maven
+        run: mvn clean package
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Build with SAM
+        run: sam build -t primary-template.yaml
+
+      - name: Debug - Check build output
+        run: |
+          echo "Checking .aws-sam directory:"
+          ls -la .aws-sam/
+          echo "Checking build directory:"
+          ls -la .aws-sam/build/
+          echo "Checking template file:"
+          find .aws-sam -name "*.yaml"
+
+      - name: Create S3 Bucket if it does not exist
+        run: |
+          BUCKET_NAME="my-photo-blog-deployment-bucket"
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket $BUCKET_NAME already exists"
+          else
+            echo "Creating bucket $BUCKET_NAME"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
+          fi
+        env:
+          AWS_DEFAULT_REGION: eu-west-1
+
+      - name: Deploy CloudFormation stack
+        run: |
+          TEMPLATE_FILE=".aws-sam/build/template.yaml"
+          
+          sam deploy \
+            --template-file "$TEMPLATE_FILE" \
+            --stack-name photo-blog-primary \
+            --parameter-overrides \
+              AppName=photo-blog-group1 \
+              StageName=dev \
+              BackupRegion=eu-central-1 \
+              BackupBucketArn=arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786 \
+              BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
+              BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --s3-bucket my-photo-blog-deployment-bucket
