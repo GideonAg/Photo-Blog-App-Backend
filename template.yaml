@@ -66,6 +66,7 @@ Globals:
         STAGING_BUCKET: !Ref StagingBucket
         MAIN_BUCKET: !Ref MainBucket
         BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+        AWS_ACCOUNT_ID: !Ref AWS::AccountId
 
 Resources:
   AwsSdkLayer:
@@ -170,7 +171,7 @@ Resources:
   PhotosTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos"
+      TableName: !Sub "${AppName}-${StageName}-photos-v2"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: photoId
@@ -182,6 +183,8 @@ Resources:
       KeySchema:
         - AttributeName: photoId
           KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: UserIdIndex
           KeySchema:
@@ -290,6 +293,15 @@ Resources:
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
+
+  DomainIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: test-photo-app-blog.click
+      DkimSigningAttributes:
+        NextSigningKeyLength: RSA_2048_BIT
+      DkimAttributes:
+        SigningEnabled: true
 
 
   PhotoUploadFunction:
