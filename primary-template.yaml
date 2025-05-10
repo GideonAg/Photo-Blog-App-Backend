@@ -288,32 +288,34 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
-          options:
-            produces:
-              - application/json
-            responses:
-              "200":
-                description: "CORS preflight response"
-                headers:
-                  Access-Control-Allow-Origin:
-                    type: string
-                  Access-Control-Allow-Methods:
-                    type: string
-                  Access-Control-Allow-Headers:
-                    type: string
-            x-amazon-apigateway-integration:
-              type: MOCK
-              requestTemplates:
-                application/json: '{"statusCode": 200}'
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
               responses:
-                default:
-                  statusCode: "200"
-                  responseParameters:
-                    method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                    method.response.header.Access-Control-Allow-Methods: "'*'"
-                    method.response.header.Access-Control-Allow-Headers: "'*'"
-                  responseTemplates:
-                    application/json: '{}'
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
           /photos/{photoId}:
             get:
               produces:
@@ -331,6 +333,8 @@ Resources:
                 - CognitoAuthorizer: []
             options:
               produces:
+                - application/json
+              consumes:
                 - application/json
               responses:
                 "200":
@@ -387,6 +391,8 @@ Resources:
             options:
               produces:
                 - application/json
+              consumes:
+                - application/json
               responses:
                 "200":
                   description: "CORS preflight response"
@@ -429,6 +435,8 @@ Resources:
             options:
               produces:
                 - application/json
+              consumes:
+                - application/json
               responses:
                 "200":
                   description: "CORS preflight response"
@@ -469,6 +477,8 @@ Resources:
                 - CognitoAuthorizer: []
             options:
               produces:
+                - application/json
+              consumes:
                 - application/json
               responses:
                 "200":
@@ -511,6 +521,8 @@ Resources:
             options:
               produces:
                 - application/json
+              consumes:
+                - application/json
               responses:
                 "200":
                   description: "CORS preflight response"
@@ -537,6 +549,8 @@ Resources:
           /health:
             options:
               produces:
+                - application/json
+              consumes:
                 - application/json
               responses:
                 "200":
