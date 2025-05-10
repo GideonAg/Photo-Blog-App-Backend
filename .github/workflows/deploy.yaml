@@ -195,7 +195,7 @@ jobs:
       - name: Debug - Output passed variables
         run: |
           echo "Checking passed variables:"
-          echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
+          echo "Backup Bucket ARN: arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786}"
           echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
           echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
 
