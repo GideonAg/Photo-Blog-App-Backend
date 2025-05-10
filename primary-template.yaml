@@ -604,7 +604,7 @@ Resources:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
           MAIN_BUCKET: !Ref MainBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
@@ -637,7 +637,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -670,7 +670,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -697,7 +697,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -724,7 +724,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -751,7 +751,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -778,7 +778,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -807,7 +807,7 @@ Resources:
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
           MAIN_BUCKET: !Ref MainBucket
       Policies:
@@ -839,7 +839,7 @@ Resources:
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
           MAIN_BUCKET: !Ref MainBucket
       Policies:
@@ -957,7 +957,7 @@ Resources:
           PRIMARY_REGION: !Ref AWS::Region
           BACKUP_REGION: !Ref BackupRegion
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
       Policies:
@@ -999,7 +999,7 @@ Resources:
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PHOTOS_TABLE: !Ref PhotosTable
+          PHOTO_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -1091,26 +1091,26 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
-#  Route53FailoverConfig:
-#    Type: AWS::Route53::RecordSetGroup
-#    Properties:
-#      HostedZoneName: !Sub "${DomainName}."
-#      RecordSets:
-#        - Name: !Sub "api.${DomainName}"
-#          Type: A
-#          AliasTarget:
-#            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
-#            HostedZoneId: !Sub "Z1U9ULNL0V5AJ3" # API Gateway hosted zone ID for eu-west-1
-#            EvaluateTargetHealth: false
-#          HealthCheckId: !Ref Route53HealthCheck
-#        - Name: !Sub "api.${DomainName}"
-#          Type: A
-#          AliasTarget:
-#            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
-#            HostedZoneId: !Sub "Z1U9ULNL0V5AJ3" # API Gateway hosted zone ID for eu-central-1
-#            EvaluateTargetHealth: false
-#          SetIdentifier: "backup"
-#          Failover: SECONDARY
+  Route53FailoverConfig:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Sub "${DomainName}."
+      RecordSets:
+        - Name: !Sub "api.${DomainName}"
+          Type: A
+          AliasTarget:
+            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
+            HostedZoneId: !Sub "Z07073352UBORQGYJNAVV"
+            EvaluateTargetHealth: false
+          HealthCheckId: !Ref Route53HealthCheck
+        - Name: !Sub "api.${DomainName}"
+          Type: A
+          AliasTarget:
+            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
+            HostedZoneId: !Sub "Z07073352UBORQGYJNAVV"
+            EvaluateTargetHealth: false
+          SetIdentifier: "backup"
+          Failover: SECONDARY
 
   PrimaryRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm
