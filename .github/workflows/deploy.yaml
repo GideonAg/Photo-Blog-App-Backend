@@ -220,14 +220,6 @@ jobs:
         run: |
           TEMPLATE_FILE=".aws-sam/build/template.yaml"
           
-          echo "Deploying with parameters:"
-          echo "AppName=photo-blog-group1"
-          echo "StageName=dev"
-          echo "BackupRegion=eu-central-1"
-          echo "BackupBucketArn=${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
-          echo "BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
-          echo "BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
-
           sam deploy \
             --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-primary \
