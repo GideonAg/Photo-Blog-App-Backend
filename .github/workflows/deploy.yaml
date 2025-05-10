@@ -112,15 +112,11 @@ jobs:
             exit 1
           fi
 
-          # Debug - List all outputs from the stack
-          echo "DEBUG: Listing all stack outputs"
-          aws cloudformation describe-stacks \
-            --stack-name photo-blog-backup \
-            --region eu-central-1 \
-            --query "Stacks[0].Outputs" \
-            --output json
-          
-          # Getting outputs - Use exact case matching for OutputKey
+          # Log all stack outputs for debugging
+          echo "All stack outputs:"
+          aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].Outputs" --output json
+
+          # Retrieve outputs
           BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
             --region eu-central-1 \
@@ -139,29 +135,34 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
             --output text || echo "")
           
+          # Log retrieved values
+          echo "Retrieved outputs:"
           echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
           echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
           echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
-          
-          if [ -z "$BACKUP_BUCKET_ARN" ]; then
-            echo "WARNING: Backup Bucket ARN is empty, trying alternative approach"
-            BACKUP_BUCKET_ARN=$(aws cloudformation list-exports \
-              --region eu-central-1 \
-              --query "Exports[?Name=='photo-blog-group1-dev-backup-bucket-arn'].Value" \
-              --output text || echo "")
-            echo "Backup Bucket ARN from exports: $BACKUP_BUCKET_ARN"
-          fi
-          
-          if [ -z "$BACKUP_BUCKET_ARN" ] || [ -z "$BACKUP_USER_POOL_ID" ] || [ -z "$BACKUP_USER_POOL_CLIENT_ID" ]; then
-            echo "ERROR: Failed to retrieve one or more outputs"
+
+          # Check for missing outputs
+          MISSING_OUTPUTS=""
+          [ -z "$BACKUP_BUCKET_ARN" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupBucketArn"
+          [ -z "$BACKUP_USER_POOL_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolId"
+          [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolClientId"
+
+          if [ -n "$MISSING_OUTPUTS" ]; then
+            echo "ERROR: Failed to retrieve the following outputs:$MISSING_OUTPUTS"
             aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1
             exit 1
           fi
-          
+
+          # Set outputs
+          echo "Setting outputs for GitHub Actions:"
+          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
+          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
+          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
+
           echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
-          
+
           echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
@@ -226,9 +227,14 @@ jobs:
           echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
           echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
           echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
-          
-          if [ -z "${{ needs.deploy-backup.outputs.backup_bucket_arn }}" ] || [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_id }}" ] || [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}" ]; then
-            echo "ERROR: One or more backup resources are missing. Deployment cannot proceed."
+
+          MISSING_OUTPUTS=""
+          [ -z "${{ needs.deploy-backup.outputs.backup_bucket_arn }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_bucket_arn"
+          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_id"
+          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_client_id"
+
+          if [ -n "$MISSING_OUTPUTS" ]; then
+            echo "ERROR: The following backup resources are missing:$MISSING_OUTPUTS"
             exit 1
           else
             echo "All backup resources retrieved successfully."
@@ -250,6 +256,14 @@ jobs:
         run: |
           TEMPLATE_FILE=".aws-sam/build/template.yaml"
           
+          echo "Deploying with parameters:"
+          echo "AppName=photo-blog-group1"
+          echo "StageName=dev"
+          echo "BackupRegion=eu-central-1"
+          echo "BackupBucketArn=${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
+          echo "BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
+          echo "BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
+
           sam deploy \
             --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-primary \
