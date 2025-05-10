@@ -30,7 +30,7 @@ Parameters:
     Description: Email address to send notifications from
   HostedZoneId:
     Type: String
-    Default: Z07073352UBORQGYJNAVV
+    Default: "Z07073352UBORQGYJNAVV"
     Description: Route53 hosted zone ID for the domain
   PrimaryUserPoolId:
     Type: String
@@ -579,7 +579,7 @@ Resources:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
       Policies:
@@ -611,7 +611,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -644,7 +644,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -671,7 +671,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -698,7 +698,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
@@ -725,7 +725,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -752,7 +752,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref BackupUserPool
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -781,7 +781,7 @@ Resources:
           USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
@@ -810,7 +810,7 @@ Resources:
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - SQSSendMessagePolicy:
@@ -858,7 +858,7 @@ Resources:
           SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
           BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PHOTO_TABLE: !Ref PhotosTable
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
