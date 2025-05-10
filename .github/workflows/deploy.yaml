@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     outputs:
-      backup_bucket_arn: ${{ steps.export-resources.outputs.BACKUP_BUCKET_ARN }}
-      backup_user_pool_id: ${{ steps.export-resources.outputs.BACKUP_USER_POOL_ID }}
-      backup_user_pool_client_id: ${{ steps.export-resources.outputs.BACKUP_USER_POOL_CLIENT_ID }}
+      backup_bucket_arn: ${{ steps.export-resources.outputs.backup_bucket_arn }}
+      backup_user_pool_id: ${{ steps.export-resources.outputs.backup_user_pool_id }}
+      backup_user_pool_client_id: ${{ steps.export-resources.outputs.backup_user_pool_client_id }}
 
     steps:
       - uses: actions/checkout@v3
@@ -155,17 +155,14 @@ jobs:
 
           # Set outputs
           echo "Setting outputs for GitHub Actions:"
+          echo "backup_bucket_arn=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_id=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_client_id=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          
+          # For debugging only
           echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
-
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
-
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
 
   deploy-primary:
     name: Deploy Primary Region
@@ -195,19 +192,12 @@ jobs:
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
 
-      - name: Debug - List files
+      - name: Debug - Output passed variables
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Checking if primary-template.yaml exists:"
-          if [ -f "primary-template.yaml" ]; then
-            echo "File exists"
-            cat primary-template.yaml | head -n 10
-          else
-            echo "File does not exist"
-          fi
+          echo "Checking passed variables:"
+          echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
+          echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
+          echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
 
       - name: Build with SAM
         run: sam build -t primary-template.yaml
