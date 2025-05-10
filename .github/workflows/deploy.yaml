@@ -112,6 +112,15 @@ jobs:
             exit 1
           fi
 
+          # Debug - List all outputs from the stack
+          echo "DEBUG: Listing all stack outputs"
+          aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs" \
+            --output json
+          
+          # Getting outputs - Use exact case matching for OutputKey
           BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
             --region eu-central-1 \
@@ -133,6 +142,15 @@ jobs:
           echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
           echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
           echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
+          
+          if [ -z "$BACKUP_BUCKET_ARN" ]; then
+            echo "WARNING: Backup Bucket ARN is empty, trying alternative approach"
+            BACKUP_BUCKET_ARN=$(aws cloudformation list-exports \
+              --region eu-central-1 \
+              --query "Exports[?Name=='photo-blog-group1-dev-backup-bucket-arn'].Value" \
+              --output text || echo "")
+            echo "Backup Bucket ARN from exports: $BACKUP_BUCKET_ARN"
+          fi
           
           if [ -z "$BACKUP_BUCKET_ARN" ] || [ -z "$BACKUP_USER_POOL_ID" ] || [ -z "$BACKUP_USER_POOL_CLIENT_ID" ]; then
             echo "ERROR: Failed to retrieve one or more outputs"
