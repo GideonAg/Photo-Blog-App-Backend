@@ -246,7 +246,7 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: !Sub "'https://${DomainName}'"
+        AllowOrigin: !Sub "https://${DomainName}"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
