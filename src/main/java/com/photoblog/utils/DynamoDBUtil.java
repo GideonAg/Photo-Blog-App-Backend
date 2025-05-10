@@ -17,13 +17,13 @@ import java.util.Map;
  * The type Dynamo db util.
  */
 public class DynamoDBUtil {
-    private static final String PHOTO_TABLE = System.getenv("PHOTO_TABLE");
+    private static final String PHOTO_TABLE = System.getenv("PHOTOS_TABLE");
     private static final AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard().build();
     private static final DynamoDBMapper dynamoDBMapper;
 
     static {
         if (PHOTO_TABLE == null || PHOTO_TABLE.isEmpty()) {
-            throw new IllegalStateException("PHOTO_TABLE environment variable is not set.");
+            throw new IllegalStateException("PHOTOS_TABLE environment variable is not set.");
         }
         DynamoDBMapperConfig mapperConfig = DynamoDBMapperConfig.builder()
                 .withTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(PHOTO_TABLE))

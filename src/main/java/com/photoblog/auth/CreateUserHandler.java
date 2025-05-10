@@ -27,6 +27,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
+            context.getLogger().log(input.getBody());
             CreateUserRequest request = mapper.readValue(input.getBody(), CreateUserRequest.class);
 
             var response = service.createUser(request);
@@ -37,6 +38,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
                     .withBody(mapper.writeValueAsString(response));
 
         } catch (Exception e) {
+            context.getLogger().log(e.getMessage());
             var response = CreateUserResponse.builder()
                     .success(false)
                     .message("Error during registration: " + e.getMessage())
