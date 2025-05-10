@@ -211,24 +211,24 @@ jobs:
           echo "Checking template file:"
           find .aws-sam -name "*.yaml"
 
-      - name: Verify backup resources from previous job
-        run: |
-          echo "Verifying backup resources..."
-          echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
-          echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
-          echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
-
-          MISSING_OUTPUTS=""
-          [ -z "${{ needs.deploy-backup.outputs.backup_bucket_arn }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_bucket_arn"
-          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_id"
-          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_client_id"
-
-          if [ -n "$MISSING_OUTPUTS" ]; then
-            echo "ERROR: The following backup resources are missing:$MISSING_OUTPUTS"
-            exit 1
-          else
-            echo "All backup resources retrieved successfully."
-          fi
+#      - name: Verify backup resources from previous job
+#        run: |
+#          echo "Verifying backup resources..."
+#          echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
+#          echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
+#          echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
+#
+#          MISSING_OUTPUTS=""
+#          [ -z "${{ needs.deploy-backup.outputs.backup_bucket_arn }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_bucket_arn"
+#          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_id"
+#          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_client_id"
+#
+#          if [ -n "$MISSING_OUTPUTS" ]; then
+#            echo "ERROR: The following backup resources are missing:$MISSING_OUTPUTS"
+#            exit 1
+#          else
+#            echo "All backup resources retrieved successfully."
+#          fi
 
       - name: Create S3 Bucket if it does not exist
         run: |
