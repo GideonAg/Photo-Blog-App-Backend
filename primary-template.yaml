@@ -289,8 +289,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
           options:
-            consumes:
-              - application/json
             produces:
               - application/json
             responses:
@@ -332,8 +330,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
@@ -389,8 +385,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
@@ -416,7 +410,7 @@ Resources:
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
                       application/json: '{}'
-
+          
           /recycle-bin:
             get:
               produces:
@@ -433,8 +427,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
@@ -476,8 +468,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
@@ -519,8 +509,6 @@ Resources:
               security:
                 - CognitoAuthorizer: []
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
@@ -548,8 +536,6 @@ Resources:
                       application/json: '{}'
           /health:
             options:
-              consumes:
-                - application/json
               produces:
                 - application/json
               responses:
