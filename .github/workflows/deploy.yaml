@@ -74,33 +74,61 @@ jobs:
             --no-confirm-changeset \
             --s3-bucket my-photo-blog-backup-deployment-buckets
 
+      - name: Wait for Stack Completion
+        run: |
+          echo "Waiting for photo-blog-backup stack to complete..."
+          aws cloudformation wait stack-create-complete --stack-name photo-blog-backup --region eu-central-1 || \
+          aws cloudformation wait stack-update-complete --stack-name photo-blog-backup --region eu-central-1
+          if [ $? -ne 0 ]; then
+            echo "Stack deployment failed or timed out"
+            aws cloudformation describe-stack-events --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+          echo "Stack deployment completed"
+
       - name: Export backup resources
         id: export-resources
         run: |
+          echo "Retrieving stack outputs..."
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].StackStatus" --output text)
+          if [[ "$STACK_STATUS" != "CREATE_COMPLETE" && "$STACK_STATUS" != "UPDATE_COMPLETE" ]]; then
+            echo "Stack is not in a valid state: $STACK_STATUS"
+            aws cloudformation describe-stack-events --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+
           BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
+            --region eu-central-1 \
             --query "Stacks[0].Outputs[?OutputKey=='BackupBucketArn'].OutputValue" \
-            --output text)
+            --output text || echo "")
           
           BACKUP_USER_POOL_ID=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
+            --region eu-central-1 \
             --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolId'].OutputValue" \
-            --output text)
+            --output text || echo "")
           
           BACKUP_USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
+            --region eu-central-1 \
             --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
-            --output text)
-          
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
+            --output text || echo "")
           
           echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
           echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
           echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
           
-          # Set outputs for the next job
+          if [ -z "$BACKUP_BUCKET_ARN" ] || [ -z "$BACKUP_USER_POOL_ID" ] || [ -z "$BACKUP_USER_POOL_CLIENT_ID" ]; then
+            echo "ERROR: Failed to retrieve one or more outputs"
+            aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+          
+          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
+          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
+          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
+          
           echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
