@@ -26,7 +26,9 @@ jobs:
           mkdir -p aws-sdk-layer/java/lib
           cd aws-sdk-layer
           mvn clean package
-          cp -r target/java/lib/* java/lib/
+          cp -r target/aws-sdk-layer-1.0-SNAPSHOT.jar java/lib/
+          cd ..
+          mvn clean package
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -39,7 +41,7 @@ jobs:
         uses: aws-actions/setup-sam@v2
 
       - name: Build with SAM
-        run: sam build -t primary-template.yaml
+        run: sam build -t template.yaml
 
       - name: Get backup resources from eu-central-1
         run: |
@@ -80,7 +82,7 @@ jobs:
       - name: Deploy CloudFormation stack
         run: |
           sam deploy \
-            --template .aws-sam/build/template.yaml \
+            --template template.yaml \
             --stack-name photo-blog-primary \
             --parameter-overrides \
               AppName=photo-blog-application \
