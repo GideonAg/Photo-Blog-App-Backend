@@ -1,4 +1,4 @@
-package com.photolog.utils;
+package com.photoblog.utils;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
@@ -43,10 +43,8 @@ class AuthorizerClaimsTest {
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
 
-        // Act
         Map<String, String> result = AuthorizerClaims.extractCognitoClaims(request);
 
-        // Assert
         assertEquals(4, result.size());
         assertEquals("f394c852-70d1-70e7-941e-ba6b19a3444e", result.get("userId"));
         assertEquals("kwasi.baidoo@amalitech.com", result.get("email"));
@@ -65,10 +63,9 @@ class AuthorizerClaimsTest {
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
 
-        // Act
+        
         Map<String, String> result = AuthorizerClaims.extractCognitoClaims(request);
 
-        // Assert
         assertEquals(4, result.size());
         assertEquals("f394c852-70d1-70e7-941e-ba6b19a3444e", result.get("userId"));
         assertEquals("kwasi.baidoo@amalitech.com", result.get("email"));
@@ -78,18 +75,12 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldOmitOptionalClaimsWhenMissing() {
-        // Arrange
         claims.put("sub", "f394c852-70d1-70e7-941e-ba6b19a3444e");
         claims.put("email", "kwasi.baidoo@amalitech.com");
-        // custom:firstName and custom:lastName are missing
         authorizer.put("claims", claims);
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
-
-        // Act
         Map<String, String> result = AuthorizerClaims.extractCognitoClaims(request);
-
-        // Assert
         assertEquals(2, result.size());
         assertEquals("f394c852-70d1-70e7-941e-ba6b19a3444e", result.get("userId"));
         assertEquals("kwasi.baidoo@amalitech.com", result.get("email"));
@@ -99,19 +90,13 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldOmitUserIdWhenSubIsMissing() {
-        // Arrange
         claims.put("email", "kwasi.baidoo@amalitech.com");
         claims.put("custom:firstName", "Kwasi");
         claims.put("custom:lastName", "Sakyi");
-        // sub is missing
         authorizer.put("claims", claims);
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
-
-        // Act
         Map<String, String> result = AuthorizerClaims.extractCognitoClaims(request);
-
-        // Assert
         assertEquals(3, result.size());
         assertNull(result.get("userId"));
         assertEquals("kwasi.baidoo@amalitech.com", result.get("email"));
@@ -121,16 +106,12 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldThrowExceptionWhenEmailIsMissing() {
-        // Arrange
         claims.put("sub", "f394c852-70d1-70e7-941e-ba6b19a3444e");
         claims.put("custom:firstName", "Kwasi");
         claims.put("custom:lastName", "Sakyi");
-        // email is missing
         authorizer.put("claims", claims);
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
-
-        // Act & Assert
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
             AuthorizerClaims.extractCognitoClaims(request));
         assertEquals("Required 'email' claim is missing", exception.getMessage());
@@ -138,7 +119,6 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldThrowExceptionWhenRequestIsNull() {
-        // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             AuthorizerClaims.extractCognitoClaims(null));
         assertEquals("APIGatewayProxyRequestEvent cannot be null", exception.getMessage());
@@ -146,10 +126,7 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldThrowExceptionWhenRequestContextIsNull() {
-        // Arrange
         when(request.getRequestContext()).thenReturn(null);
-
-        // Act & Assert
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
             AuthorizerClaims.extractCognitoClaims(request));
         assertEquals("Request context is null, cannot access authorizer", exception.getMessage());
@@ -157,11 +134,8 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldThrowExceptionWhenAuthorizerIsNull() {
-        // Arrange
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(null);
-
-        // Act & Assert
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
             AuthorizerClaims.extractCognitoClaims(request));
         assertEquals("User is not authenticated, authorizer is null", exception.getMessage());
@@ -169,15 +143,11 @@ class AuthorizerClaimsTest {
 
     @Test
     void shouldReturnEmptyMapWhenClaimsIsNull() {
-        // Arrange
-        // authorizer is empty (no claims or jwt.claims)
         when(request.getRequestContext()).thenReturn(requestContext);
         when(requestContext.getAuthorizer()).thenReturn(authorizer);
 
-        // Act
         Map<String, String> result = AuthorizerClaims.extractCognitoClaims(request);
 
-        // Assert
         assertTrue(result.isEmpty());
     }
 }
