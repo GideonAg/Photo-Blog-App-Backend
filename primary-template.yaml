@@ -14,13 +14,8 @@ Globals:
         PHOTOS_TABLE: !Ref PhotosTable
         MAIN_BUCKET: !Ref MainBucket
         DOMAIN_NAME: !Ref DomainName
-        PRIMARY_REGION: !Ref AWS::Region
+        PRIMARY_REGION: !Ref PrimaryRegion
         BACKUP_REGION: !Ref BackupRegion
-    Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref PhotosTable
-      - S3CrudPolicy:
-          BucketName: !Ref MainBucket
 
 Parameters:
   AppName:
@@ -56,10 +51,6 @@ Parameters:
     Type: String
     Default: eu-west-1
     Description: Primary AWS region
-  AWS_ACCOUNT_ID:
-    Type: String
-    Default: AWS::AccountId
-    Description: AWS Account ID
   BackupBucketArn:
     Type: String
     Description: ARN of the backup bucket in the backup region
@@ -81,7 +72,7 @@ Resources:
   StagingBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "${AppName}-${StageName}-staging-${AWS::Region}-${AWS_ACCOUNT_ID}"
+      BucketName: !Sub "${AppName}-${StageName}-staging-${AWS::Region}-${AWS::AccountId}"
       LifecycleConfiguration:
         Rules:
           - Id: DeleteAfter30Days
@@ -89,9 +80,9 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [ !Sub '*' ]
+          - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub '*' ]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -115,13 +106,13 @@ Resources:
                 Action:
                   - s3:GetReplicationConfiguration
                   - s3:ListBucket
-                Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-main-${AWS::Region}-${AWS_ACCOUNT_ID}"
+                Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-main-${AWS::Region}-${AWS::AccountId}"
               - Effect: Allow
                 Action:
                   - s3:GetObjectVersion
                   - s3:GetObjectVersionAcl
                   - s3:GetObjectVersionTagging
-                Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-main-${AWS::Region}-${AWS_ACCOUNT_ID}/*"
+                Resource: !Sub "arn:aws:s3:::${AppName}-${StageName}-main-${AWS::Region}-${AWS::AccountId}/*"
               - Effect: Allow
                 Action:
                   - s3:ReplicateObject
@@ -133,14 +124,14 @@ Resources:
     Type: AWS::S3::Bucket
     DependsOn: S3ReplicationRole
     Properties:
-      BucketName: !Sub "${AppName}-${StageName}-main-${AWS::Region}-${AWS_ACCOUNT_ID}"
+      BucketName: !Sub "${AppName}-${StageName}-main-${AWS::Region}-${AWS::AccountId}"
       VersioningConfiguration:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [ !Sub '*' ]
+          - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub '*' ]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -674,7 +665,7 @@ Resources:
                 "500":
                   description: "Server error"
               x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-31/functions/${CreateUserHandler.Arn}/invocations"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
                 httpMethod: POST
                 type: aws_proxy
             options:
@@ -717,6 +708,10 @@ Resources:
           STAGING_BUCKET: !Ref StagingBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - S3CrudPolicy:
             BucketName: !Ref StagingBucket
         - SQSSendMessagePolicy:
@@ -760,6 +755,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -809,6 +809,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -822,6 +827,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -843,6 +853,10 @@ Resources:
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
           STAGING_BUCKET: !Ref StagingBucket
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - S3CrudPolicy:
             BucketName: !Ref StagingBucket
         - SNSPublishMessagePolicy:
@@ -866,6 +880,10 @@ Resources:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
           STAGING_BUCKET: !Ref StagingBucket
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ImageProcessingQueue.QueueName
       Events:
@@ -1069,7 +1087,7 @@ Resources:
                 - cognito-idp:AdminSetUserPassword
               Resource:
                 - !GetAtt UserPool.Arn
-                - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS_ACCOUNT_ID}:userpool/${BackupUserPoolId}"
+                - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS::AccountId}:userpool/${BackupUserPoolId}"
       Events:
         ScheduledEvent:
           Type: Schedule
