@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     outputs:
-      backup_bucket_arn: ${{ steps.export-resources.outputs.BACKUP_BUCKET_ARN }}
-      backup_user_pool_id: ${{ steps.export-resources.outputs.BACKUP_USER_POOL_ID }}
-      backup_user_pool_client_id: ${{ steps.export-resources.outputs.BACKUP_USER_POOL_CLIENT_ID }}
+      backup_bucket_arn: ${{ steps.export-resources.outputs.backup_bucket_arn }}
+      backup_user_pool_id: ${{ steps.export-resources.outputs.backup_user_pool_id }}
+      backup_user_pool_client_id: ${{ steps.export-resources.outputs.backup_user_pool_client_id }}
+      backup_api_id: ${{ steps.export-resources.outputs.backup_api_id }}
 
     steps:
       - uses: actions/checkout@v3
@@ -38,15 +39,6 @@ jobs:
 
       - name: SAM Build
         run: sam build -t backup-template.yaml
-
-      - name: Debug - Check build output
-        run: |
-          echo "Checking .aws-sam directory:"
-          ls -la .aws-sam/
-          echo "Checking build directory:"
-          ls -la .aws-sam/build/
-          echo "Checking template file:"
-          find .aws-sam -name "*.yaml"
 
       - name: Create S3 Bucket if not exists
         run: |
@@ -112,10 +104,6 @@ jobs:
             exit 1
           fi
 
-          # Log all stack outputs for debugging
-          echo "All stack outputs:"
-          aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].Outputs" --output json
-
           # Retrieve outputs
           BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
@@ -135,17 +123,25 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
             --output text || echo "")
           
+          BACKUP_API_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupApiId'].OutputValue" \
+            --output text || echo "")
+
           # Log retrieved values
           echo "Retrieved outputs:"
           echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
           echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
           echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
+          echo "Backup API ID: $BACKUP_API_ID"
 
           # Check for missing outputs
           MISSING_OUTPUTS=""
           [ -z "$BACKUP_BUCKET_ARN" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupBucketArn"
           [ -z "$BACKUP_USER_POOL_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolId"
           [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolClientId"
+          [ -z "$BACKUP_API_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupApiId"
 
           if [ -n "$MISSING_OUTPUTS" ]; then
             echo "ERROR: Failed to retrieve the following outputs:$MISSING_OUTPUTS"
@@ -155,17 +151,16 @@ jobs:
 
           # Set outputs
           echo "Setting outputs for GitHub Actions:"
+          echo "backup_bucket_arn=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_id=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_client_id=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "backup_api_id=$BACKUP_API_ID" >> $GITHUB_OUTPUT
+          
+          # For debugging only
           echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
           echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
           echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
-
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
-
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "BACKUP_API_ID=$BACKUP_API_ID"
 
   deploy-primary:
     name: Deploy Primary Region
@@ -195,50 +190,8 @@ jobs:
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
 
-      - name: Debug - List files
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Checking if primary-template.yaml exists:"
-          if [ -f "primary-template.yaml" ]; then
-            echo "File exists"
-            cat primary-template.yaml | head -n 10
-          else
-            echo "File does not exist"
-          fi
-
       - name: Build with SAM
         run: sam build -t primary-template.yaml
-
-      - name: Debug - Check build output
-        run: |
-          echo "Checking .aws-sam directory:"
-          ls -la .aws-sam/
-          echo "Checking build directory:"
-          ls -la .aws-sam/build/
-          echo "Checking template file:"
-          find .aws-sam -name "*.yaml"
-
-      - name: Verify backup resources from previous job
-        run: |
-          echo "Verifying backup resources..."
-          echo "Backup Bucket ARN: ${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
-          echo "Backup User Pool ID: ${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
-          echo "Backup User Pool Client ID: ${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
-
-          MISSING_OUTPUTS=""
-          [ -z "${{ needs.deploy-backup.outputs.backup_bucket_arn }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_bucket_arn"
-          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_id"
-          [ -z "${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS backup_user_pool_client_id"
-
-          if [ -n "$MISSING_OUTPUTS" ]; then
-            echo "ERROR: The following backup resources are missing:$MISSING_OUTPUTS"
-            exit 1
-          else
-            echo "All backup resources retrieved successfully."
-          fi
 
       - name: Create S3 Bucket if it does not exist
         run: |
@@ -256,14 +209,6 @@ jobs:
         run: |
           TEMPLATE_FILE=".aws-sam/build/template.yaml"
           
-          echo "Deploying with parameters:"
-          echo "AppName=photo-blog-group1"
-          echo "StageName=dev"
-          echo "BackupRegion=eu-central-1"
-          echo "BackupBucketArn=${{ needs.deploy-backup.outputs.backup_bucket_arn }}"
-          echo "BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }}"
-          echo "BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }}"
-
           sam deploy \
             --template-file "$TEMPLATE_FILE" \
             --stack-name photo-blog-primary \
@@ -271,9 +216,10 @@ jobs:
               AppName=photo-blog-group1 \
               StageName=dev \
               BackupRegion=eu-central-1 \
-              BackupBucketArn=${{ needs.deploy-backup.outputs.backup_bucket_arn }} \
+              BackupBucketArn=arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786 \
               BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
               BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
+              BackupApiId=z028ocw6l0 \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \

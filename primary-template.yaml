@@ -24,6 +24,10 @@ Parameters:
     Type: String
     Default: notifications@mscv2group1.link
     Description: Email address to send notifications from
+  HostedZoneId:
+    Type: String
+    Default: Z07073352UBORQGYJNAVV
+    Description: Route53 hosted zone ID for the domain
   BackupRegion:
     Type: String
     Default: eu-central-1
@@ -288,6 +292,34 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
           /photos/{photoId}:
             get:
               produces:
@@ -303,6 +335,34 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
             delete:
               produces:
                 - application/json
@@ -332,6 +392,35 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          
           /recycle-bin:
             get:
               produces:
@@ -347,6 +436,34 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
           /recycle-bin/{photoId}/restore:
             post:
               produces:
@@ -362,6 +479,34 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
           /recycle-bin/{photoId}:
             delete:
               produces:
@@ -377,7 +522,63 @@ Resources:
                 type: aws_proxy
               security:
                 - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
           /health:
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
             get:
               produces:
                 - application/json
@@ -778,7 +979,7 @@ Resources:
                 - s3:ListBucket
               Resource:
                 - !Ref BackupBucketArn
-                - !Sub SED "${BackupBucketArn}/*"
+                - !Sub "${BackupBucketArn}/*"
       Events:
         ScheduledEvent:
           Type: Schedule
@@ -894,26 +1095,28 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
-  Route53FailoverConfig:
-    Type: AWS::Route53::RecordSetGroup
-    Properties:
-      HostedZoneName: !Sub "${DomainName}."
-      RecordSets:
-        - Name: !Sub "api.${DomainName}"
-          Type: A
-          AliasTarget:
-            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
-            HostedZoneId: !Sub "Z1U9ULNL0V5AJ3" # API Gateway hosted zone ID for eu-west-1
-            EvaluateTargetHealth: false
-          HealthCheckId: !Ref Route53HealthCheck
-        - Name: !Sub "api.${DomainName}"
-          Type: A
-          AliasTarget:
-            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
-            HostedZoneId: !Sub "Z1U9ULNL0V5AJ3" # API Gateway hosted zone ID for eu-central-1
-            EvaluateTargetHealth: false
-          SetIdentifier: "backup"
-          Failover: SECONDARY
+#  Route53FailoverConfig:
+#    Type: AWS::Route53::RecordSetGroup
+#    Properties:
+#      HostedZoneName: !Sub "${DomainName}."
+#      RecordSets:
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
+#            HostedZoneId: !Sub "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          HealthCheckId: !Ref Route53HealthCheck
+#          SetIdentifier: "primary"
+#          Failover: PRIMARY
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
+#            HostedZoneId: "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          SetIdentifier: "backup"
+#          Failover: SECONDARY
 
   PrimaryRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm

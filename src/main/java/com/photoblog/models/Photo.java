@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @DynamoDBTable(tableName = "")
 public class Photo {
     static {
-        String tableName = System.getenv("PHOTO_TABLE");
+        String tableName = System.getenv("PHOTOS_TABLE");
         if (tableName != null && !tableName.isEmpty()) {
             DynamoDBMapperConfig.Builder builder = DynamoDBMapperConfig.builder();
             builder.setTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(tableName));

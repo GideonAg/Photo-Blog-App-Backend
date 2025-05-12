@@ -30,7 +30,7 @@ Parameters:
     Description: Email address to send notifications from
   HostedZoneId:
     Type: String
-    Default: Z1234567890
+    Default: "Z07073352UBORQGYJNAVV"
     Description: Route53 hosted zone ID for the domain
   PrimaryUserPoolId:
     Type: String
@@ -1071,3 +1071,8 @@ Outputs:
     Value: !Ref UserNotificationTopic
     Export:
       Name: !Sub "${AppName}-${StageName}-user-notification-topic-arn"
+  BackupApiId:
+    Description: ID of the backup API Gateway
+    Value: !Ref PhotoBlogApiBackup
+    Export:
+      Name: !Sub "${AppName}-${StageName}-backup-api-id"
