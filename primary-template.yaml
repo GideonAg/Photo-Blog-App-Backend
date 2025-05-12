@@ -2,21 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Primary resources for Photo Blog App with Disaster Recovery capability in eu-west-1
 
-Globals:
-  Function:
-    Runtime: java21
-    Timeout: 60
-    MemorySize: 512
-    Environment:
-      Variables:
-        USER_POOL_ID: !Ref UserPool
-        USER_POOL_CLIENT_ID: !Ref UserPoolClient
-        PHOTOS_TABLE: !Ref PhotosTable
-        MAIN_BUCKET: !Ref MainBucket
-        DOMAIN_NAME: !Ref DomainName
-        PRIMARY_REGION: !Ref PrimaryRegion
-        BACKUP_REGION: !Ref BackupRegion
-
 Parameters:
   AppName:
     Type: String
@@ -702,11 +687,19 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
           STAGING_BUCKET: !Ref StagingBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -731,6 +724,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -755,6 +758,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -773,6 +786,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -791,6 +814,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::listDeletedPhotos
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -809,6 +842,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -827,6 +870,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -845,6 +898,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -852,6 +906,11 @@ Resources:
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
           STAGING_BUCKET: !Ref StagingBucket
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -875,10 +934,18 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
           STAGING_BUCKET: !Ref StagingBucket
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -898,9 +965,15 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.auth.WelcomeEmailHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -919,9 +992,15 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -937,9 +1016,15 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -954,6 +1039,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - Statement:
             - Effect: Allow
@@ -973,6 +1068,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.auth.CreateUserHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - Statement:
             - Effect: Allow
@@ -993,10 +1098,16 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -1011,12 +1122,15 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.BackupHandler::handleRequest
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SystemAlertTopic.TopicName
@@ -1042,6 +1156,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.RestoreHandler::handleRequest
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -1049,6 +1164,8 @@ Resources:
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CognitoBackupTable
@@ -1069,6 +1186,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -1076,6 +1194,8 @@ Resources:
           PRIMARY_USER_POOL_ID: !Ref UserPool
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
           BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CognitoBackupTable
@@ -1101,12 +1221,15 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
           RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SystemAlertTopic.TopicName
