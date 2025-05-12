@@ -16,7 +16,6 @@ public class SESUtil {
             .build();
     private static final String senderEmail = System.getenv("EMAIL_SENDER");;
 
-    // Generic email sending function
     public static void sendEmail(String recipientEmail, String subject, String body) {
         try {
             Destination destination = Destination.builder()
@@ -60,7 +59,6 @@ public class SESUtil {
         }
     }
 
-    // Email for user login
     public void sendLoginNotification(String recipientEmail, String username, String loginTime) {
         String subject = "Photo Blog - Successful Login";
         String body = String.format(
@@ -75,7 +73,6 @@ public class SESUtil {
         sendEmail(recipientEmail, subject, body);
     }
 
-    // Email for task processing start
     public void sendProcessingStartedEmail(String recipientEmail, String photoId) {
         String subject = "Photo Blog - Processing Started";
         String body = String.format(
@@ -89,7 +86,6 @@ public class SESUtil {
         sendEmail(recipientEmail, subject, body);
     }
 
-    // Email for task processing  completion
     public void sendProcessingCompletedEmail(String recipientEmail, String photoId) {
         String subject = "Photo Blog - Processing Completed";
         String body = String.format(
@@ -103,7 +99,6 @@ public class SESUtil {
         sendEmail(recipientEmail, subject, body);
     }
 
-    // Email for task processing failure
     public void sendProcessingFailedEmail(String recipientEmail, String photoId, String errorMessage) {
         String subject = "Photo Blog - Processing Failed";
         String body = String.format(
@@ -118,7 +113,6 @@ public class SESUtil {
         sendEmail(recipientEmail, subject, body);
     }
 
-    // Helper method to strip HTML for plain text email version
     private static String stripHtml(String html) {
         return html.replaceAll("<[^>]+>", "").replaceAll("\\s+", " ").trim();
     }
