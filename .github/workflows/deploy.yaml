@@ -13,6 +13,7 @@ jobs:
       backup_bucket_arn: ${{ steps.export-resources.outputs.backup_bucket_arn }}
       backup_user_pool_id: ${{ steps.export-resources.outputs.backup_user_pool_id }}
       backup_user_pool_client_id: ${{ steps.export-resources.outputs.backup_user_pool_client_id }}
+      backup_api_id: ${{ steps.export-resources.outputs.backup_api_id }}
 
     steps:
       - uses: actions/checkout@v3
@@ -38,15 +39,6 @@ jobs:
 
       - name: SAM Build
         run: sam build -t backup-template.yaml
-
-      - name: Debug - Check build output
-        run: |
-          echo "Checking .aws-sam directory:"
-          ls -la .aws-sam/
-          echo "Checking build directory:"
-          ls -la .aws-sam/build/
-          echo "Checking template file:"
-          find .aws-sam -name "*.yaml"
 
       - name: Create S3 Bucket if not exists
         run: |
@@ -112,10 +104,6 @@ jobs:
             exit 1
           fi
 
-          # Log all stack outputs for debugging
-          echo "All stack outputs:"
-          aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1 --query "Stacks[0].Outputs" --output json
-
           # Retrieve outputs
           BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
             --stack-name photo-blog-backup \
@@ -135,34 +123,11 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
             --output text || echo "")
           
-          # Log retrieved values
-          echo "Retrieved outputs:"
-          echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
-          echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
-          echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
-
-          # Check for missing outputs
-          MISSING_OUTPUTS=""
-          [ -z "$BACKUP_BUCKET_ARN" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupBucketArn"
-          [ -z "$BACKUP_USER_POOL_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolId"
-          [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolClientId"
-
-          if [ -n "$MISSING_OUTPUTS" ]; then
-            echo "ERROR: Failed to retrieve the following outputs:$MISSING_OUTPUTS"
-            aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1
-            exit 1
-          fi
-
-          # Set outputs
-          echo "Setting outputs for GitHub Actions:"
-          echo "backup_bucket_arn=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
-          echo "backup_user_pool_id=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
-          echo "backup_user_pool_client_id=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
-          
-          # For debugging only
-          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
-          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
-          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
+          BACKUP_API_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupApiId'].OutputValue" \
+            --output text || echo "")
 
   deploy-primary:
     name: Deploy Primary Region
@@ -195,15 +160,6 @@ jobs:
       - name: Build with SAM
         run: sam build -t primary-template.yaml
 
-      - name: Debug - Check build output
-        run: |
-          echo "Checking .aws-sam directory:"
-          ls -la .aws-sam/
-          echo "Checking build directory:"
-          ls -la .aws-sam/build/
-          echo "Checking template file:"
-          find .aws-sam -name "*.yaml"
-
       - name: Create S3 Bucket if it does not exist
         run: |
           BUCKET_NAME="my-photo-blog-deployment-bucket"
@@ -230,7 +186,7 @@ jobs:
               BackupBucketArn=arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786 \
               BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
               BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
-              BackupApiId=${{ needs.deploy-backup.outputs.backup_api_id}}
+              BackupApiId=${{ needs.deploy-backup.outputs.backup_api_id}} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
