@@ -10,32 +10,32 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class QueueUtil {
-    private final String bucketName = "";
+    private final String bucketName;
     private final String sqsQueueUrl;
     private final ObjectMapper objectMapper;
     private final SqsClient sqsClient = SqsClient.builder().build();
 
     public QueueUtil() {
-        this.bucketName = bucketName;
-        this.sqsQueueUrl = sqsQueueUrl;
+        this.bucketName = System.getenv("STAGING_BUCKET");
+        this.sqsQueueUrl = System.getenv("IMAGE_PROCESSING_QUEUE");
         this.objectMapper = new ObjectMapper();
     }
 
-    public SendMessageResponse sendToQueue(String objectKey, String userEmail, LocalDateTime uploadTimestamp) throws Exception {
+    public SendMessageResponse sendToQueue(String objectKey, String firstName, String lastName, LocalDateTime uploadTimestamp) throws Exception {
         Map<String, String> messageBody = new HashMap<>();
         messageBody.put("objectKey", objectKey);
         messageBody.put("uploadDate", String.valueOf(uploadTimestamp));
-        messageBody.put("uploadedBy", userEmail);
+        messageBody.put("firstName", firstName);
+        messageBody.put("lastName", lastName);
         messageBody.put("bucket", bucketName);
 
         String messageJson;
         try {
             messageJson = objectMapper.writeValueAsString(messageBody);
         } catch (Exception e) {
-            // Fallback in case serialization fails
             messageJson = String.format(
-                    "{\"objectKey\":\"%s\",\"uploadDate\":\"%s\",\"uploadedBy\":\"%s\",\"bucket\":\"%s\"}",
-                    objectKey, uploadTimestamp, userEmail != null ? userEmail : "unknown", bucketName
+                    "{\"objectKey\":\"%s\",\"uploadDate\":\"%s\",\"bucket\":\"%s\"}",
+                    objectKey, uploadTimestamp, bucketName
             );
         }
         SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
