@@ -1071,3 +1071,8 @@ Outputs:
     Value: !Ref UserNotificationTopic
     Export:
       Name: !Sub "${AppName}-${StageName}-user-notification-topic-arn"
+  BackupApiId:
+    Description: ID of the backup API Gateway
+    Value: !Ref PhotoBlogApiBackup
+    Export:
+      Name: !Sub "${AppName}-${StageName}-backup-api-id"
