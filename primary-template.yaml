@@ -26,7 +26,7 @@ Parameters:
     Description: Email address to send notifications from
   HostedZoneId:
     Type: String
-    Default: "Z07073352UBORQGYJNAVV"
+    Default: Z07073352UBORQGYJNAVV
     Description: Route53 hosted zone ID for the domain
   BackupRegion:
     Type: String
@@ -979,7 +979,7 @@ Resources:
                 - s3:ListBucket
               Resource:
                 - !Ref BackupBucketArn
-                - !Sub SED "${BackupBucketArn}/*"
+                - !Sub "${BackupBucketArn}/*"
       Events:
         ScheduledEvent:
           Type: Schedule
@@ -1104,14 +1104,16 @@ Resources:
           Type: A
           AliasTarget:
             DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
-            HostedZoneId: !Ref HostedZoneId
+            HostedZoneId: !Sub "${HostedZoneId}"
             EvaluateTargetHealth: false
           HealthCheckId: !Ref Route53HealthCheck
+          SetIdentifier: "primary"
+          Failover: PRIMARY
         - Name: !Sub "api.${DomainName}"
           Type: A
           AliasTarget:
             DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
-            HostedZoneId: !Ref HostedZoneId
+            HostedZoneId: "${HostedZoneId}"
             EvaluateTargetHealth: false
           SetIdentifier: "backup"
           Failover: SECONDARY
