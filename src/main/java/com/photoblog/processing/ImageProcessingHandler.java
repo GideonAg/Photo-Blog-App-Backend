@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.dto.ImageProcessingRequest;
+import com.photoblog.utils.SESUtil;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
@@ -36,11 +37,14 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private final String DESTINATION_PREFIX = "images/";
     private final S3Client s3Client = createS3Client();
     private final String WATERMARK_TEXT = "TRIAL WATERMARKING";
-
+    private SESUtil sesUtil = getSesUtil();
 
     @Override
     public String handleRequest(SQSEvent event, Context context) {
+
+
         try {
+//            sesUtil.sendProcessingStartedEmail();
             String sourceKey = extractSourceKey(event, context);
             validateBucket(event, context);
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
@@ -69,7 +73,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
     private String successMessage(String sourceKey) {
-
+        return "File successfully processed and uploaded: "+MAIN_BUCKET + "/" + buildDestinationKey(sourceKey);
     }
 
 
@@ -195,5 +199,9 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
     private void logError(Context context, String message) {
         context.getLogger().log("Error: " + message);
+    }
+
+    private SESUtil getSesUtil() {
+        return new SESUtil();
     }
 }
