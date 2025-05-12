@@ -1,0 +1,20 @@
+{
+  "GlobalTables": [
+    {
+      "TableName": "photo-blog-group1-dev-photos",
+      "PrimaryRegion": "eu-west-1",
+      "ReplicaRegions": [
+        "eu-central-1"
+      ],
+      "GlobalTableVersion": "2019.11.21"
+    },
+    {
+      "TableName": "photo-blog-group1-dev-cognito-backup",
+      "PrimaryRegion": "eu-west-1",
+      "ReplicaRegions": [
+        "eu-central-1"
+      ],
+      "GlobalTableVersion": "2019.11.21"
+    }
+  ]
+}
