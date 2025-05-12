@@ -129,6 +129,39 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='BackupApiId'].OutputValue" \
             --output text || echo "")
 
+          # Log retrieved values
+          echo "Retrieved outputs:"
+          echo "Backup Bucket ARN: $BACKUP_BUCKET_ARN"
+          echo "Backup User Pool ID: $BACKUP_USER_POOL_ID"
+          echo "Backup User Pool Client ID: $BACKUP_USER_POOL_CLIENT_ID"
+          echo "Backup API ID: $BACKUP_API_ID"
+
+          # Check for missing outputs
+          MISSING_OUTPUTS=""
+          [ -z "$BACKUP_BUCKET_ARN" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupBucketArn"
+          [ -z "$BACKUP_USER_POOL_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolId"
+          [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupUserPoolClientId"
+          [ -z "$BACKUP_API_ID" ] && MISSING_OUTPUTS="$MISSING_OUTPUTS BackupApiId"
+
+          if [ -n "$MISSING_OUTPUTS" ]; then
+            echo "ERROR: Failed to retrieve the following outputs:$MISSING_OUTPUTS"
+            aws cloudformation describe-stacks --stack-name photo-blog-backup --region eu-central-1
+            exit 1
+          fi
+
+          # Set outputs
+          echo "Setting outputs for GitHub Actions:"
+          echo "backup_bucket_arn=$BACKUP_BUCKET_ARN" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_id=$BACKUP_USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "backup_user_pool_client_id=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "backup_api_id=$BACKUP_API_ID" >> $GITHUB_OUTPUT
+          
+          # For debugging only
+          echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN"
+          echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID"
+          echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID"
+          echo "BACKUP_API_ID=$BACKUP_API_ID"
+
   deploy-primary:
     name: Deploy Primary Region
     runs-on: ubuntu-latest
@@ -186,7 +219,7 @@ jobs:
               BackupBucketArn=arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786 \
               BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
               BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
-              BackupApiId=${{ needs.deploy-backup.outputs.backup_api_id}} \
+              BackupApiId=z028ocw6l0 \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
