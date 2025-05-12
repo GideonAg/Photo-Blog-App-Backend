@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.ClaimsUtil;
 import com.photoblog.utils.HeadersUtil;
+import com.photoblog.utils.QueueUtil;
 import com.photoblog.utils.UploadUtil;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -25,21 +26,18 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
     private final String bucketName;
     private final String sqsQueueUrl;
     private final ObjectMapper objectMapper;
-    private final String userPoolId;
     private final Region region;
     private final UploadUtil uploadUtil;
     //    private final Utils utils;
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/gif", "image/webp"
-    );
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
     private final Map<String, String> headers = HeadersUtil.getHeaders();
-    private ClaimsUtil claimsUtil = null;
+    private final ClaimsUtil claimsUtil = new ClaimsUtil();
+    private final QueueUtil queueUtil = new QueueUtil();
 
-    public PhotoUploadHandler(){
+    public PhotoUploadHandler() {
 
         this.bucketName = System.getenv("STAGING_BUCKET");
         this.sqsQueueUrl = System.getenv("IMAGE_PROCESSING_QUEUE");
-        this.userPoolId = System.getenv("USER_POOL_ID");
         String regionName = System.getenv("PRIMARY_REGION");
         this.region = regionName != null && !regionName.isEmpty()
                 ? Region.of(regionName)
@@ -58,11 +56,11 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
         response.setIsBase64Encoded(false);
         response.setHeaders(headers);
 
-        try{
+        try {
             Map<String, String> claims = claimsUtil.getClaims(request, context);
-            if(claims.isEmpty()) return buildErrorResponse(response, 401, "Unauthorized");
+            if (claims.isEmpty()) return buildErrorResponse(response, 401, "Unauthorized");
             String userName = claims.get("cognito:username");
-            if(userName.isEmpty()) {
+            if (userName.isEmpty()) {
                 context.getLogger().log("Error:" + userName + " UserName not found");
                 return buildErrorResponse(response, 404, "UserName not found");
             }
@@ -71,7 +69,8 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             }
             Map<String, Object> requestBody = objectMapper.readValue(
                     request.getBody(),
-                    new TypeReference<Map<String, Object>>() {}
+                    new TypeReference<>() {
+                    }
             );
             context.getLogger().log("requestBody: " + requestBody);
 
@@ -82,7 +81,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             if (base64Image == null || contentType == null) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
-            if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
 
@@ -90,7 +89,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileName, imagesBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = sendToQueue(imagesBytes, userName, LocalDateTime.now());
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userName, LocalDateTime.now());
                 context.getLogger().log("SQS message sent with ID: " + sqsResponse.messageId());
 
                 String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
@@ -109,13 +108,13 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             }
             return response;
         } catch (IllegalArgumentException e) {
-            return buildErrorResponse(response, 400, "Invalid base64 encoding") ;
-        }catch (Exception e){
+            context.getLogger().log(e.getMessage());
+            return buildErrorResponse(response, 400, "Invalid base64 encoding");
+        } catch (Exception e) {
+            context.getLogger().log(e.getMessage());
             return buildErrorResponse(response, 500, "Error processing request");
         }
     }
-
-
 
 
     private APIGatewayProxyResponseEvent buildErrorResponse(APIGatewayProxyResponseEvent response, int statusCode, String message) {
@@ -126,31 +125,8 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
         try {
             response.setBody(objectMapper.writeValueAsString(errorBody));
         } catch (Exception e) {
-            response.setBody("{\"status\":\"error\",\"message\":\"" + message + "\"}");}
-        return response;
-    }
-
-    public SendMessageResponse sendToQueue(byte[] objectKey, String userEmail, LocalDateTime uploadTimestamp) throws Exception {
-        Map<String, String> messageBody = new HashMap<>();
-        messageBody.put("objectKey", Arrays.toString(objectKey));
-        messageBody.put("uploadDate", String.valueOf(uploadTimestamp));
-        messageBody.put("uploadedBy", userEmail);
-        messageBody.put("bucket", bucketName);
-
-        String messageJson;
-        try {
-            messageJson = objectMapper.writeValueAsString(messageBody);
-        } catch (Exception e) {
-            // Fallback in case serialization fails
-            messageJson = String.format(
-                    "{\"objectKey\":\"%s\",\"uploadDate\":\"%s\",\"uploadedBy\":\"%s\",\"bucket\":\"%s\"}",
-                    Arrays.toString(objectKey), uploadTimestamp, userEmail != null ? userEmail : "unknown", bucketName
-            );
+            response.setBody("{\"status\":\"error\",\"message\":\"" + message + "\"}");
         }
-        SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
-                .queueUrl(sqsQueueUrl)
-                .messageBody(messageJson)
-                .build();
-        return sqsClient.sendMessage(sendMessageRequest);
+        return response;
     }
 }
