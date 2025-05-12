@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @DynamoDBTable(tableName = "")
 public class Photo {
     static {
-        String tableName = System.getenv("PHOTO_TABLE");
+        String tableName = System.getenv("PHOTOS_TABLE");
         if (tableName != null && !tableName.isEmpty()) {
             DynamoDBMapperConfig.Builder builder = DynamoDBMapperConfig.builder();
             builder.setTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(tableName));
@@ -34,7 +34,8 @@ public class Photo {
     private String imageName;
 
     @DynamoDBAttribute
-    private String status;
+    @DynamoDBTypeConvertedEnum
+    private Status status;
 
     @DynamoDBAttribute
     private String createdAt;
@@ -44,4 +45,9 @@ public class Photo {
 
     @DynamoDBAttribute
     private String versionId;
+
+    public enum Status{
+        ACTIVE,
+        DELETED
+    }
 }

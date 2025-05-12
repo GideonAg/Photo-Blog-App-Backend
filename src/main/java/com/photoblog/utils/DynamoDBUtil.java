@@ -7,16 +7,17 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.photoblog.models.Photo;
+import com.photoblog.models.Photo.Status;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Utility class for DynamoDB operations
+ * The type Dynamo db util.
  */
 public class DynamoDBUtil {
-    private static final String PHOTO_TABLE = System.getenv("PHOTO_TABLE");
+    private static final String PHOTO_TABLE = System.getenv("PHOTOS_TABLE");
     private static final AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard().build();
     private static final DynamoDBMapper dynamoDBMapper;
 
@@ -31,30 +32,43 @@ public class DynamoDBUtil {
     }
 
     /**
-     * Get photo by user ID and photo ID (composite key)
+     * Gets photo by id.
+     *
+     * @param userId  the user id
+     * @param photoId the photo id
+     * @return the photo by id
      */
     public static Photo getPhotoById(String userId, String photoId) {
         return dynamoDBMapper.load(Photo.class, userId, photoId);
     }
 
     /**
-     * Save a photo to DynamoDB
+     * Save photo.
+     *
+     * @param photo the photo
      */
     public static void savePhoto(Photo photo) {
         dynamoDBMapper.save(photo);
     }
 
     /**
-     * Delete a photo from DynamoDB
+     * Delete photo.
+     *
+     * @param photo the photo
      */
     public static void deletePhoto(Photo photo) {
         dynamoDBMapper.delete(photo);
     }
 
     /**
-     * Update photo status
+     * Update photo status photo.
+     *
+     * @param userId  the user id
+     * @param photoId the photo id
+     * @param status  the status
+     * @return the photo
      */
-    public static Photo updatePhotoStatus(String userId, String photoId, String status) {
+    public static Photo updatePhotoStatus(String userId, String photoId, Status status) {
         Photo photo = getPhotoById(userId, photoId);
         if (photo != null) {
             photo.setStatus(status);
@@ -64,12 +78,16 @@ public class DynamoDBUtil {
     }
 
     /**
-     * Get photos by user ID with specific status
+     * Gets photos by user id and status.
+     *
+     * @param userId the user id
+     * @param status the status
+     * @return the photos by user id and status
      */
-    public static List<Photo> getPhotosByUserIdAndStatus(String userId, String status) {
+    public static List<Photo> getPhotosByUserIdAndStatus(String userId, Status status) {
         Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
         expressionAttributeValues.put(":userId", new AttributeValue().withS(userId));
-        expressionAttributeValues.put(":status", new AttributeValue().withS(status));
+        expressionAttributeValues.put(":status", new AttributeValue().withS(status.name()));
 
         DynamoDBQueryExpression<Photo> queryExpression = new DynamoDBQueryExpression<Photo>()
                 .withKeyConditionExpression("userId = :userId")
@@ -82,21 +100,32 @@ public class DynamoDBUtil {
     }
 
     /**
-     * Get all active photos by user ID
+     * Gets active photos by user id.
+     *
+     * @param userId the user id
+     * @return the active photos by user id
      */
     public static List<Photo> getActivePhotosByUserId(String userId) {
-        return getPhotosByUserIdAndStatus(userId, "active");
+        return getPhotosByUserIdAndStatus(userId, Status.ACTIVE);
     }
 
     /**
-     * Get all deleted photos by user ID
+     * Gets deleted photos by user id.
+     *
+     * @param userId the user id
+     * @return the deleted photos by user id
      */
     public static List<Photo> getDeletedPhotosByUserId(String userId) {
-        return getPhotosByUserIdAndStatus(userId, "deleted");
+        return getPhotosByUserIdAndStatus(userId, Status.DELETED);
     }
 
     /**
-     * Update the photo's S3 version ID
+     * Update photo version id photo.
+     *
+     * @param userId    the user id
+     * @param photoId   the photo id
+     * @param versionId the version id
+     * @return the photo
      */
     public static Photo updatePhotoVersionId(String userId, String photoId, String versionId) {
         Photo photo = getPhotoById(userId, photoId);

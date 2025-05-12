@@ -1,73 +1,56 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Primary resources for Photo Blog App with Disaster Recovery capability
+Description: Primary resources for Photo Blog App with Disaster Recovery capability in eu-west-1
 
 Parameters:
   AppName:
     Type: String
-    Default: photo-blog-application
+    Default: photo-blog-group1
     Description: Name of the application
-
   StageName:
     Type: String
     Default: dev
     Description: Stage name for the API Gateway deployment
     AllowedValues: [dev, prod]
-
   DomainName:
     Type: String
     Default: mscv2group1.link
     Description: Domain name for the application
-
   FrontendBucketName:
     Type: String
     Default: photo-blog-frontend-assets
     Description: Name of the S3 bucket for frontend assets
-
   EmailSender:
     Type: String
     Default: notifications@mscv2group1.link
     Description: Email address to send notifications from
-
+  HostedZoneId:
+    Type: String
+    Default: Z07073352UBORQGYJNAVV
+    Description: Route53 hosted zone ID for the domain
   BackupRegion:
     Type: String
     Default: eu-central-1
     Description: Backup AWS region for disaster recovery
-
   BackupBucketArn:
     Type: String
     Description: ARN of the backup bucket in the backup region
     Default: ""
-
   BackupUserPoolId:
     Type: String
     Description: ID of the backup Cognito user pool
     Default: ""
-
   BackupUserPoolClientId:
     Type: String
     Description: ID of the backup Cognito user pool client
     Default: ""
-
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 512
-    Runtime: java21
-    Environment:
-      Variables:
-        STAGE: !Ref StageName
-        APP_NAME: !Ref AppName
-        DOMAIN_NAME: !Ref DomainName
-        EMAIL_SENDER: !Ref EmailSender
-        PRIMARY_REGION: !Ref AWS::Region
-        BACKUP_REGION: !Ref BackupRegion
-        PHOTOS_TABLE: !Ref PhotosTable
-        STAGING_BUCKET: !Ref StagingBucket
-        MAIN_BUCKET: !Ref MainBucket
-        BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+  BackupApiId:
+    Type: String
+    Description: ID of the backup API Gateway in the backup region
+    Default: ""
 
 Resources:
+<<<<<<< HEAD
   AwsSdkLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -78,6 +61,8 @@ Resources:
         - java21
       RetentionPolicy: Retain
 
+=======
+>>>>>>> dev
   StagingBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -89,15 +74,10 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders:
-              - "*"
-            AllowedMethods:
-              - GET
-              - PUT
-              - POST
-              - DELETE
-            AllowedOrigins:
-              - !Sub "https://${DomainName}"
+          - AllowedHeaders: [ !Sub '*' ]
+            AllowedMethods: [ GET, POST, DELETE ]
+            AllowedOrigins: [ !Sub '*' ]
+#            AllowedOrigins: [!Sub "https://${DomainName}"]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -105,7 +85,7 @@ Resources:
     Properties:
       RoleName: !Sub "${AppName}-${StageName}-s3-replication-role"
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -115,7 +95,7 @@ Resources:
       Policies:
         - PolicyName: S3ReplicationPolicy
           PolicyDocument:
-            Version: 2012-10-17
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -144,12 +124,10 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders:
-              - "*"
-            AllowedMethods:
-              - GET
-            AllowedOrigins:
-              - !Sub "https://${DomainName}"
+          - AllowedHeaders: [ !Sub '*' ]
+            AllowedMethods: [ GET, POST, DELETE ]
+            AllowedOrigins: [ !Sub '*' ]
+#            AllowedOrigins: [!Sub "https://${DomainName}"]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -229,9 +207,6 @@ Resources:
     Properties:
       QueueName: !Sub "${AppName}-${StageName}-image-processing"
       VisibilityTimeout: 300
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ProcessingRetryQueue.Arn
-        maxReceiveCount: 3
 
   ProcessingRetryQueue:
     Type: AWS::SQS::Queue
@@ -251,15 +226,15 @@ Resources:
       Schema:
         - Name: email
           AttributeDataType: String
-          Required: true
+          Required: No
           Mutable: true
         - Name: firstName
           AttributeDataType: String
-          Required: false
+          Required: No
           Mutable: true
         - Name: lastName
           AttributeDataType: String
-          Required: false
+          Required: No
           Mutable: true
 
   UserPoolClient:
@@ -288,25 +263,372 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: !Sub "'https://${DomainName}'"
+        AllowOrigin: !Sub "https://${DomainName}"
       Auth:
+        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
-
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: !Sub "${AppName}-${StageName}-api"
+        paths:
+          /photos:
+            post:
+              consumes:
+                - multipart/form-data
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo uploaded successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoUploadFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            get:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photos retrieved successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /photos/{photoId}:
+            get:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo retrieved successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+            delete:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo deleted successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoDeleteFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+          /photos/{photoId}/share:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo shared successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoShareFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          
+          /recycle-bin:
+            get:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Deleted photos retrieved successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinQueryFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /recycle-bin/{photoId}/restore:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo restored successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinRestoreFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /recycle-bin/{photoId}:
+            delete:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Photo permanently deleted successfully"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinDeleteFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - CognitoAuthorizer: []
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /health:
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+            get:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "Health check"
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseTemplates:
+                      application/json: '{"status": "healthy"}'
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
+          PHOTOS_TABLE: !Ref PhotosTable
+          STAGING_BUCKET: !Ref StagingBucket
+          MAIN_BUCKET: !Ref MainBucket
+          USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -323,20 +645,25 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos
             Method: post
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   PhotoQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -349,28 +676,31 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos
             Method: get
-            Auth:
-              Authorizer: CognitoAuthorizer
         GetPhoto:
           Type: Api
           Properties:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}
             Method: get
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -383,20 +713,25 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}
             Method: delete
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   PhotoShareFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -409,20 +744,25 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /photos/{photoId}/share
             Method: post
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   RecycleBinQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.RecycleBinHandler::listDeletedPhotos
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -435,20 +775,25 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin
             Method: get
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   RecycleBinRestoreFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -461,20 +806,25 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin/{photoId}/restore
             Method: post
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   RecycleBinDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -487,16 +837,17 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /recycle-bin/{photoId}
             Method: delete
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -505,6 +856,9 @@ Resources:
           USER_POOL_CLIENT_ID: !Ref UserPoolClient
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
+          PHOTOS_TABLE: !Ref PhotosTable
+          STAGING_BUCKET: !Ref StagingBucket
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -522,19 +876,47 @@ Resources:
           Properties:
             Queue: !GetAtt ImageProcessingQueue.Arn
             BatchSize: 1
-        RetrySQS:
+
+  ProcessingRetryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
+          PHOTOS_TABLE: !Ref PhotosTable
+          STAGING_BUCKET: !Ref StagingBucket
+          MAIN_BUCKET: !Ref MainBucket
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt ImageProcessingQueue.QueueName
+      Events:
+        SQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt ProcessingRetryQueue.QueueName
+            Queue: !GetAtt ProcessingRetryQueue.Arn
             BatchSize: 1
-  
+
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.auth.WelcomeEmailHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -548,6 +930,7 @@ Resources:
       Principal: cognito-idp.amazonaws.com
       SourceArn: !GetAtt UserPool.Arn
 
+<<<<<<< HEAD
   AuthenticationFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -614,25 +997,23 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: /
+=======
+  LoginNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
-      SnapStart:
-        ApplyOn: PublishedVersions
-      AutoPublishAlias: live
-      DeploymentPreference:
-        Enabled: true
-        Type: AllAtOnce
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
       Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - 'ses:SendEmail'
-                - 'ses:SendRawEmail'
-              Resource:
-                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailSender}"
-                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+        - SESCrudPolicy:
+            IdentityName: !Ref DomainName
       Events:
         PostAuthentication:
           Type: Cognito
@@ -643,10 +1024,19 @@ Resources:
   UserNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -659,10 +1049,22 @@ Resources:
   SystemAlertFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          EMAIL_SENDER: !Ref EmailSender
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref AWS::Region
+          BACKUP_REGION: !Ref BackupRegion
+          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -675,10 +1077,13 @@ Resources:
   BackupHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.disaster.BackupHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -686,11 +1091,16 @@ Resources:
           PRIMARY_REGION: !Ref AWS::Region
           BACKUP_REGION: !Ref BackupRegion
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SystemAlertTopic.TopicName
         - Statement:
             - Effect: Allow
               Action:
@@ -711,10 +1121,13 @@ Resources:
   RestoreHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.disaster.RestoreHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -723,9 +1136,14 @@ Resources:
           BACKUP_REGION: !Ref BackupRegion
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CognitoBackupTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
         - Statement:
@@ -733,6 +1151,7 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:ListBucket
+                - s3:CopyObject
               Resource:
                 - !Ref BackupBucketArn
                 - !Sub "${BackupBucketArn}/*"
@@ -742,10 +1161,13 @@ Resources:
   CognitoBackupFunction:
     Type: AWS::Serverless::Function
     Properties:
+<<<<<<< HEAD
       CodeUri: /
+=======
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -775,6 +1197,7 @@ Resources:
             Name: CognitoSyncSchedule
             Description: Sync Cognito users between primary and backup pools every 6 hours
 
+<<<<<<< HEAD
   Route53FailoverConfig:
     Type: AWS::Serverless::Function
     Properties:
@@ -803,9 +1226,14 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: /
+=======
+  DisasterRecoveryTriggerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+>>>>>>> dev
       Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
-      Layers:
-        - !Ref AwsSdkLayer
+      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -822,6 +1250,42 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: !GetAtt RestoreHandlerFunction.Arn
+      Events:
+        AlarmTrigger:
+          Type: SNS
+          Properties:
+            Topic: !Ref SystemAlertTopic
+        ApiGatewayTrigger:
+          Type: SNS
+          Properties:
+            Topic: !Ref SystemAlertTopic
+        Route53Trigger:
+          Type: SNS
+          Properties:
+            Topic: !Ref SystemAlertTopic
+
+#  Route53FailoverConfig:
+#    Type: AWS::Route53::RecordSetGroup
+#    Properties:
+#      HostedZoneName: !Sub "${DomainName}."
+#      RecordSets:
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
+#            HostedZoneId: !Sub "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          HealthCheckId: !Ref Route53HealthCheck
+#          SetIdentifier: "primary"
+#          Failover: PRIMARY
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
+#            HostedZoneId: "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          SetIdentifier: "backup"
+#          Failover: SECONDARY
 
   PrimaryRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -865,6 +1329,7 @@ Resources:
         Port: 443
         Type: HTTPS
         FullyQualifiedDomainName: !Ref DomainName
+        ResourcePath: !Sub "/${StageName}/health"
         RequestInterval: 30
         FailureThreshold: 3
       HealthCheckTags:
@@ -896,49 +1361,41 @@ Outputs:
     Value: !Sub "https://${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
     Export:
       Name: !Sub "${AppName}-${StageName}-api-url"
-
   UserPoolId:
     Description: Cognito User Pool ID
     Value: !Ref UserPool
     Export:
       Name: !Sub "${AppName}-${StageName}-user-pool-id"
-
   UserPoolClientId:
     Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
     Export:
       Name: !Sub "${AppName}-${StageName}-user-pool-client-id"
-
   StagingBucketName:
     Description: Name of the staging S3 bucket
     Value: !Ref StagingBucket
     Export:
       Name: !Sub "${AppName}-${StageName}-staging-bucket-name"
-
   MainBucketName:
     Description: Name of the main S3 bucket
     Value: !Ref MainBucket
     Export:
       Name: !Sub "${AppName}-${StageName}-main-bucket-name"
-
   PhotosTableName:
     Description: Name of the photos DynamoDB table
     Value: !Ref PhotosTable
     Export:
       Name: !Sub "${AppName}-${StageName}-photos-table-name"
-
   CognitoBackupTableName:
     Description: Name of the Cognito backup DynamoDB table
     Value: !Ref CognitoBackupTable
     Export:
       Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
-
   SystemAlertTopicArn:
     Description: ARN of the system alert SNS topic
     Value: !Ref SystemAlertTopic
     Export:
       Name: !Sub "${AppName}-${StageName}-system-alert-topic-arn"
-
   UserNotificationTopicArn:
     Description: ARN of the user notification SNS topic
     Value: !Ref UserNotificationTopic
