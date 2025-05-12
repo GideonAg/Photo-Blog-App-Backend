@@ -1095,28 +1095,28 @@ Resources:
           Properties:
             Topic: !Ref SystemAlertTopic
 
-  Route53FailoverConfig:
-    Type: AWS::Route53::RecordSetGroup
-    Properties:
-      HostedZoneName: !Sub "${DomainName}."
-      RecordSets:
-        - Name: !Sub "api.${DomainName}"
-          Type: A
-          AliasTarget:
-            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
-            HostedZoneId: !Sub "${HostedZoneId}"
-            EvaluateTargetHealth: false
-          HealthCheckId: !Ref Route53HealthCheck
-          SetIdentifier: "primary"
-          Failover: PRIMARY
-        - Name: !Sub "api.${DomainName}"
-          Type: A
-          AliasTarget:
-            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
-            HostedZoneId: "${HostedZoneId}"
-            EvaluateTargetHealth: false
-          SetIdentifier: "backup"
-          Failover: SECONDARY
+#  Route53FailoverConfig:
+#    Type: AWS::Route53::RecordSetGroup
+#    Properties:
+#      HostedZoneName: !Sub "${DomainName}."
+#      RecordSets:
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${PhotoBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
+#            HostedZoneId: !Sub "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          HealthCheckId: !Ref Route53HealthCheck
+#          SetIdentifier: "primary"
+#          Failover: PRIMARY
+#        - Name: !Sub "api.${DomainName}"
+#          Type: A
+#          AliasTarget:
+#            DNSName: !Sub "${BackupApiId}.execute-api.${BackupRegion}.amazonaws.com"
+#            HostedZoneId: "${HostedZoneId}"
+#            EvaluateTargetHealth: false
+#          SetIdentifier: "backup"
+#          Failover: SECONDARY
 
   PrimaryRegionHealthAlarm:
     Type: AWS::CloudWatch::Alarm
