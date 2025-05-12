@@ -22,16 +22,20 @@ public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestE
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context){
+        context.getLogger().log("Received Request to query photos");
+
         try {
             Map<String, String> claims = AuthorizerClaims.extractCognitoClaims(input);
             String userId = claims.get("userId");
             if(userId == null){
+                context.getLogger().log("Unauthorized: Missing usrId in claims");
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(401)
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody("{\"error\": \"Unauthorized: Missing userId\"}");
 
             }
+            context.getLogger().log("Authenticated user: " + userId);
 
             List<Photo> photos = DynamoDBUtil.getActivePhotosByUserId(userId);
             if(photos.isEmpty()){
@@ -40,11 +44,13 @@ public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestE
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody("{\"message\": \"No active photos found\"}");
             }
+            context.getLogger().log("Retrieved " + photos.size() + " active photos for user: " + userId);
 
             List<String> photoUrls = photos.stream()
                     .map(photo -> s3Util.getImage(userId, photo.getPhotoId()))
                     .toList();
 
+            context.getLogger().log("Generated presigned URLs for " + photoUrls.size() + " photos");
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
                     .withHeaders(HeadersUtil.getHeaders())
