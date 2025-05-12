@@ -2,6 +2,26 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Backup resources for Photo Blog App Disaster Recovery in eu-central-1
 
+Globals:
+  Function:
+    Runtime: java21
+    Timeout: 60
+    MemorySize: 512
+    Environment:
+      Variables:
+        USER_POOL_ID: !Ref BackupUserPool
+        USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
+        PHOTOS_TABLE: !Ref PhotosTable
+        MAIN_BUCKET: !Ref MainBucket
+        DOMAIN_NAME: !Ref DomainName
+        PRIMARY_REGION: !Ref AWS::Region
+        BACKUP_REGION: !Ref AWS::Region
+    Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref PhotosTable
+      - S3CrudPolicy:
+          BucketName: !Ref MainBucket
+
 Parameters:
   AppName:
     Type: String
@@ -16,6 +36,10 @@ Parameters:
     Type: String
     Default: eu-west-1
     Description: Primary AWS region
+  BackupRegion:
+    Type: String
+    Default: eu-central-1
+    Description: Backup AWS region
   PrimaryAccountId:
     Type: String
     Description: AWS Account ID where the primary region resources are deployed
@@ -53,7 +77,6 @@ Resources:
           - AllowedHeaders: [ !Sub '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
             AllowedOrigins: [ !Sub '*' ]
-            #AllowedOrigins: [!Sub "https://${DomainName}"]
             MaxAge: 3600
 
   MainBucket:
@@ -565,28 +588,103 @@ Resources:
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
                       application/json: '{}'
+          /auth/login:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "User authenticated successfully"
+                "401":
+                  description: "Authentication failed"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationHandler.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /auth/signup:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "User created successfully"
+                "400":
+                  description: "Invalid request"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ImageProcessingQueue.QueueName
         - SNSPublishMessagePolicy:
@@ -604,15 +702,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -637,20 +726,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -664,15 +739,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -691,15 +757,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::listDeletedPhotos
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -718,20 +775,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -745,20 +788,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -772,22 +801,13 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
-      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
-          USER_POOL_ID: !Ref BackupUserPool
-          USER_POOL_CLIENT_ID: !Ref BackupUserPoolClient
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - SQSSendMessagePolicy:
@@ -804,14 +824,9 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.processing.ProcessingRetryHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ImageProcessingQueue.QueueName
@@ -827,13 +842,9 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
-          DOMAIN_NAME: !Ref DomainName
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -843,30 +854,62 @@ Resources:
           Properties:
             Topic: !Ref UserNotificationTopic
 
+  AuthenticationHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:InitiateAuth
+              Resource: !GetAtt BackupUserPool.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApiBackup
+            Path: /auth/login
+            Method: post
+
+  CreateUserHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.CreateUserHandler::handleRequest
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:SignUp
+                - cognito-idp:AdminCreateUser
+              Resource: !GetAtt BackupUserPool.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApiBackup
+            Path: /auth/signup
+            Method: post
+
   RestoreHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.RestoreHandler::handleRequest
-      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
+          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
           BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - DynamoDBCrudPolicy:
             TableName: !Ref CognitoBackupTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
         - Statement:
             - Effect: Allow
               Action:
@@ -884,7 +927,6 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
-      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
@@ -892,7 +934,7 @@ Resources:
           RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
+          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt BackupAlertTopic.TopicName
@@ -902,95 +944,77 @@ Resources:
                 - lambda:InvokeFunction
               Resource: !GetAtt RestoreHandlerFunction.Arn
       Events:
-        ManualTrigger:
-          Type: CloudWatchEvent
+        AlarmTrigger:
+          Type: SNS
           Properties:
-            Pattern:
-              detail-type:
-                - "Manual DR Trigger"
-            State: ENABLED
+            Topic: !Ref BackupAlertTopic
 
   Route53FailoverHandler:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.Route53FailoverHandler::handleRequest
-      Runtime: java21
       Timeout: 300
       MemorySize: 1024
       Environment:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          DOMAIN_NAME: !Ref DomainName
-          API_URL: !Sub "https://${PhotoBlogApiBackup}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
-          SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
+          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
           HOSTED_ZONE_ID: !Ref HostedZoneId
+          DOMAIN_NAME: !Ref DomainName
       Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt BackupAlertTopic.TopicName
         - Statement:
             - Effect: Allow
               Action:
                 - route53:ChangeResourceRecordSets
-                - route53:ListResourceRecordSets
-                - route53:GetHostedZone
-                - route53:ListHostedZones
-              Resource: "*"
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
+              Resource: !Sub "arn:aws:route53:::hostedzone/${HostedZoneId}"
+      Events:
+        SNSEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref BackupAlertTopic
 
   RegionMonitorFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.RegionMonitorHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
+      Timeout: 300
+      MemorySize: 1024
       Environment:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          TRIGGER_FUNCTION_ARN: !GetAtt DisasterRecoveryTriggerFunction.Arn
-          SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
-          API_GATEWAY_ID: !Ref PhotoBlogApiBackup
+          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
       Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt BackupAlertTopic.TopicName
         - Statement:
             - Effect: Allow
               Action:
-                - health:DescribeEvents
-                - health:DescribeEventDetails
-                - cloudwatch:GetMetricData
+                - cloudwatch:DescribeAlarms
               Resource: "*"
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource: !GetAtt DisasterRecoveryTriggerFunction.Arn
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
       Events:
-        RegionMonitorSchedule:
+        ScheduledEvent:
           Type: Schedule
           Properties:
             Schedule: rate(5 minutes)
-            Name: !Sub "${AppName}-${StageName}-region-monitor"
-            Description: "Schedule to monitor primary region health"
-            State: ENABLED
+            Name: RegionMonitorSchedule
+            Description: Monitor primary region health every 5 minutes
 
   BackupAlertHandler:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: com.photoblog.notifications.BackupAlertHandler::handleRequest
-      Runtime: java21
-      Timeout: 60
-      MemorySize: 512
       Environment:
         Variables:
+          EMAIL_SENDER: !Ref EmailSender
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          EMAIL_SENDER: !Ref EmailSender
-          DOMAIN_NAME: !Ref DomainName
-          SYSTEM_ALERT_TOPIC: !Ref BackupAlertTopic
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -999,21 +1023,6 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref BackupAlertTopic
-
-  BackupRegionHealthAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub "${AppName}-${StageName}-backup-region-health"
-      AlarmDescription: "Alarm for monitoring the backup region health"
-      MetricName: "StatusCheckFailed"
-      Namespace: "AWS/EC2"
-      Statistic: "Maximum"
-      Period: 60
-      EvaluationPeriods: 2
-      Threshold: 1
-      ComparisonOperator: "GreaterThanOrEqualToThreshold"
-      AlarmActions:
-        - !Ref BackupAlertTopic
 
 Outputs:
   BackupBucketName:
