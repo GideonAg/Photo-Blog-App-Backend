@@ -75,7 +75,7 @@ Resources:
       Description: AWS SDK Dependencies Layer
       ContentUri: ./aws-sdk-layer
       CompatibleRuntimes:
-        - java17
+        - java21
       RetentionPolicy: Retain
 
   StagingBucket:
@@ -298,7 +298,7 @@ Resources:
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.PhotoUploadHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -329,7 +329,7 @@ Resources:
   PhotoQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.PhotoQueryHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -363,8 +363,8 @@ Resources:
   PhotoDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
-      Handler: com.photoblog.photos.DeletePhotoHandler::handleRequest
+      CodeUri: /
+      Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
       Environment:
@@ -389,7 +389,7 @@ Resources:
   PhotoShareFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.PhotoShareHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -415,7 +415,7 @@ Resources:
   RecycleBinQueryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.RecycleBinHandler::listDeletedPhotos
       Layers:
         - !Ref AwsSdkLayer
@@ -441,7 +441,7 @@ Resources:
   RecycleBinRestoreFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
       Layers:
         - !Ref AwsSdkLayer
@@ -467,7 +467,7 @@ Resources:
   RecycleBinDeleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
       Layers:
         - !Ref AwsSdkLayer
@@ -493,7 +493,7 @@ Resources:
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.processing.ImageProcessingHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -531,7 +531,7 @@ Resources:
   WelcomeEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.auth.WelcomeEmailHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -551,7 +551,7 @@ Resources:
   AuthenticationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -575,7 +575,7 @@ Resources:
   CreateUserFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.auth.CreateUserHandler::handleRequest
       Environment:
         Variables:
@@ -613,7 +613,7 @@ Resources:
   LoginNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.notifications.LoginNotificationHandler::handleRequest
       SnapStart:
         ApplyOn: PublishedVersions
@@ -643,7 +643,7 @@ Resources:
   UserNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.notifications.ProcessingNotificationHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -659,7 +659,7 @@ Resources:
   SystemAlertFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.notifications.SystemAlertHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -675,7 +675,7 @@ Resources:
   BackupHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.disaster.BackupHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -711,7 +711,7 @@ Resources:
   RestoreHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.disaster.RestoreHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -742,7 +742,7 @@ Resources:
   CognitoBackupFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -778,7 +778,7 @@ Resources:
   Route53FailoverConfig:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.disaster.Route53FailoverHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
@@ -802,7 +802,7 @@ Resources:
   DisasterRecoveryTriggerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/Photo-Blog-App-Backend-1.0-SNAPSHOT.jar
+      CodeUri: /
       Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
       Layers:
         - !Ref AwsSdkLayer
