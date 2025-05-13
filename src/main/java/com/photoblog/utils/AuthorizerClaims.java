@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class AuthorizerClaims {
 
+    @SuppressWarnings("unchecked")
     public static Map<String, String> extractCognitoClaims(APIGatewayProxyRequestEvent request) {
         if (request == null) {
             throw new IllegalArgumentException("APIGatewayProxyRequestEvent cannot be null");
@@ -21,7 +22,6 @@ public class AuthorizerClaims {
         }
         
         // Try "claims" first, then "jwt.claims"
-        @SuppressWarnings("unchecked")
         Map<String, Object> authorizerClaims = (Map<String, Object>) authorizer.get("claims");
         if (authorizerClaims == null) {
             authorizerClaims = (Map<String, Object>) authorizer.get("jwt.claims");
