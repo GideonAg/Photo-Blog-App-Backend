@@ -51,7 +51,7 @@ public class ImageProcessor {
      * @return The canonical path of the processed image file
      * @throws IOException If there's an error processing the image
      */
-    public String addWatermark(ImageProcessingRequest request) throws IOException {
+    public File addWatermark(ImageProcessingRequest request) throws IOException {
         WatermarkSettings settings = WatermarkSettings.builder().build();
         return addWatermark(request, settings);
     }
@@ -64,7 +64,7 @@ public class ImageProcessor {
      * @return The canonical path of the processed image file
      * @throws IOException If there's an error processing the image
      */
-    public String addWatermark(ImageProcessingRequest request, WatermarkSettings settings) throws IOException {
+    public File addWatermark(ImageProcessingRequest request, WatermarkSettings settings) throws IOException {
         // Create text watermark with provided settings
         BufferedImage textWaterMark = createTextWatermark(
                 request.getWatermarkText(),
@@ -84,7 +84,7 @@ public class ImageProcessor {
                 .toFile(outputImage);
 
         log.info("Watermark added successfully: {}", outputImage.getAbsolutePath());
-        return outputImage.getCanonicalPath();
+        return outputImage;
     }
 
     /**

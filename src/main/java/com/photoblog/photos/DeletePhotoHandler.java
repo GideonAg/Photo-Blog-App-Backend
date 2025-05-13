@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectVersionsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectVersion;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -87,7 +88,7 @@ public class DeletePhotoHandler implements RequestHandler<APIGatewayProxyRequest
 
             photo.setStatus(Photo.Status.DELETED);
             photo.setVersionId(latestVersionId);
-            photo.setUpdatedAt(Instant.now().toString());
+            photo.setUpdatedAt(LocalDateTime.now());
             DynamoDBUtil.savePhoto(photo);
 
             return new APIGatewayProxyResponseEvent()
