@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-APP_NAME="photo-blog-application-group1"
+APP_NAME="photo-blog-group1"
 STAGE="dev"
 BACKUP_REGION="eu-central-1"
 TEMPLATE_FILE="backup-template.yml"

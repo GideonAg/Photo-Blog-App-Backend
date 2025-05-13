@@ -17,7 +17,7 @@ import java.util.Map;
  * The type Dynamo db util.
  */
 public class DynamoDBUtil {
-    private static final String PHOTO_TABLE = System.getenv("PHOTO_TABLE");
+    private static final String PHOTO_TABLE = System.getenv("PHOTOS_TABLE");
     private static final AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard().build();
     private static final DynamoDBMapper dynamoDBMapper;
 

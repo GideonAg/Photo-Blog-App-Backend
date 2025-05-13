@@ -7,7 +7,7 @@
 set -e
 
 # Default parameters (can be overridden via environment variables or command-line arguments)
-APP_NAME=${APP_NAME:-"photo-blog-application-group1"}
+APP_NAME=${APP_NAME:-"photo-blog-group1"}
 STAGE_NAME=${STAGE_NAME:-"dev"}
 PRIMARY_REGION=${PRIMARY_REGION:-"eu-west-1"}
 BACKUP_REGION=${BACKUP_REGION:-"eu-central-1"}
