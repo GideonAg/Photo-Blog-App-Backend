@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 @RequiredArgsConstructor
-public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class DeletePhotoHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final S3Util s3Util;
     private final Gson gson = new Gson();
 
