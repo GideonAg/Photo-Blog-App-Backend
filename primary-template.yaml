@@ -32,6 +32,10 @@ Parameters:
     Type: String
     Default: eu-central-1
     Description: Backup AWS region for disaster recovery
+  PrimaryRegion:
+    Type: String
+    Default: eu-west-1
+    Description: Primary AWS region
   BackupBucketArn:
     Type: String
     Description: ARN of the backup bucket in the backup region
@@ -61,10 +65,9 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [ !Sub '*' ]
+          - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub '*' ]
-#            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -111,10 +114,9 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [ !Sub '*' ]
+          - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub '*' ]
-#            AllowedOrigins: [!Sub "https://${DomainName}"]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -420,7 +422,6 @@ Resources:
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
                       application/json: '{}'
-          
           /recycle-bin:
             get:
               produces:
@@ -594,6 +595,96 @@ Resources:
                     statusCode: "200"
                     responseTemplates:
                       application/json: '{"status": "healthy"}'
+          /auth/login:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "User authenticated successfully"
+                "401":
+                  description: "Authentication failed"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationHandler.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - NONE: [ ]
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
+          /auth/signup:
+            post:
+              produces:
+                - application/json
+              responses:
+                "200":
+                  description: "User created successfully"
+                "400":
+                  description: "Invalid request"
+                "500":
+                  description: "Server error"
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - NONE: [ ]
+            options:
+              produces:
+                - application/json
+              consumes:
+                - application/json
+              responses:
+                "200":
+                  description: "CORS preflight response"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Headers:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: MOCK
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Methods: "'*'"
+                      method.response.header.Access-Control-Allow-Headers: "'*'"
+                    responseTemplates:
+                      application/json: '{}'
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
@@ -605,16 +696,19 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
-          MAIN_BUCKET: !Ref MainBucket
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
+          PHOTOS_TABLE: !Ref PhotosTable
+          MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - S3CrudPolicy:
             BucketName: !Ref StagingBucket
         - SQSSendMessagePolicy:
@@ -639,10 +733,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -672,10 +767,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -699,10 +795,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -726,10 +823,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -753,10 +851,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -780,10 +879,11 @@ Resources:
       MemorySize: 512
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -807,20 +907,21 @@ Resources:
       MemorySize: 1024
       Environment:
         Variables:
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
           PROCESSING_RETRY_QUEUE: !Ref ProcessingRetryQueue
-          PHOTOS_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
-            BucketName: !Ref StagingBucket
-        - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - S3CrudPolicy:
+            BucketName: !Ref StagingBucket
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - SQSSendMessagePolicy:
@@ -843,10 +944,17 @@ Resources:
       Environment:
         Variables:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
-          PHOTOS_TABLE: !Ref PhotosTable
           STAGING_BUCKET: !Ref StagingBucket
+          PHOTOS_TABLE: !Ref PhotosTable
           MAIN_BUCKET: !Ref MainBucket
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ImageProcessingQueue.QueueName
       Events:
@@ -868,6 +976,8 @@ Resources:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
           DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -893,6 +1003,8 @@ Resources:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
           DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -915,6 +1027,8 @@ Resources:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
           DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -923,6 +1037,69 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref UserNotificationTopic
+
+  AuthenticationHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.AuthenticationHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:InitiateAuth
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApi
+            Path: /auth/login
+            Method: post
+            Auth:
+              Authorizer: NONE
+
+  CreateUserHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.photoblog.auth.CreateUserHandler::handleRequest
+      Runtime: java21
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:SignUp
+                - cognito-idp:AdminCreateUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PhotoBlogApi
+            Path: /auth/signup
+            Method: post
+            Auth:
+              Authorizer: NONE
 
   SystemAlertFunction:
     Type: AWS::Serverless::Function
@@ -935,10 +1112,10 @@ Resources:
       Environment:
         Variables:
           EMAIL_SENDER: !Ref EmailSender
-          DOMAIN_NAME: !Ref DomainName
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          DOMAIN_NAME: !Ref DomainName
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SESCrudPolicy:
             IdentityName: !Ref DomainName
@@ -958,17 +1135,11 @@ Resources:
       MemorySize: 1024
       Environment:
         Variables:
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SystemAlertTopic.TopicName
         - Statement:
@@ -998,20 +1169,14 @@ Resources:
       MemorySize: 1024
       Environment:
         Variables:
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
           BACKUP_BUCKET_ARN: !Ref BackupBucketArn
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PHOTOS_TABLE: !Ref PhotosTable
-          MAIN_BUCKET: !Ref MainBucket
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref PhotosTable
-        - DynamoDBCrudPolicy:
             TableName: !Ref CognitoBackupTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
         - Statement:
             - Effect: Allow
               Action:
@@ -1036,9 +1201,9 @@ Resources:
         Variables:
           PRIMARY_USER_POOL_ID: !Ref UserPool
           COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
           BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CognitoBackupTable
@@ -1070,9 +1235,9 @@ Resources:
       Environment:
         Variables:
           RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
-          PRIMARY_REGION: !Ref AWS::Region
-          BACKUP_REGION: !Ref BackupRegion
           SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+          PRIMARY_REGION: !Ref PrimaryRegion
+          BACKUP_REGION: !Ref BackupRegion
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SystemAlertTopic.TopicName

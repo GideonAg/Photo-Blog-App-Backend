@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,10 +43,10 @@ public class Photo {
     private Status status;
 
     @DynamoDBAttribute
-    private String createdAt;
+    private LocalDateTime createdAt;
 
     @DynamoDBAttribute
-    private String updatedAt;
+    private LocalDateTime updatedAt;
 
     @DynamoDBAttribute
     private String versionId;

@@ -6,15 +6,13 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.dto.ImageProcessingRequest;
+import com.photoblog.models.Photo;
 import com.photoblog.utils.SESUtil;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 
 public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> {
@@ -36,22 +36,51 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private final String MAIN_BUCKET = System.getenv("MAIN_BUCKET");
     private final String DESTINATION_PREFIX = "images/";
     private final S3Client s3Client = createS3Client();
-    private final String WATERMARK_TEXT = "TRIAL WATERMARKING";
+    private String WATERMARK_TEXT = null;
     private SESUtil sesUtil = getSesUtil();
 
     @Override
     public String handleRequest(SQSEvent event, Context context) {
 
 
+            String sourceKey= null;
+            String userEmail = null;
         try {
-//            sesUtil.sendProcessingStartedEmail();
-            String sourceKey = extractSourceKey(event, context);
-            validateBucket(event, context);
+
+            context.getLogger().log("Processing SQS event: " + event.getRecords().size() + " records");
+            for (SQSEvent.SQSMessage message : event.getRecords()) {
+                String messageBody = message.getBody();
+                context.getLogger().log("Processing message: " + message.getBody());
+
+                // Deserialize the message body to extract file details
+                Map<String, Object> messageMap = objectMapper.readValue(messageBody, Map.class);
+                sourceKey = (String) messageMap.get("fileName");
+                String firstName = (String) messageMap.get("firstName");
+                String lastName = (String) messageMap.get("lastName");
+
+
+                context.getLogger().log("File to process: " + sourceKey + " for " + firstName + " " + lastName);
+                WATERMARK_TEXT = firstName+lastName+String.valueOf(LocalDateTime.now());
+            }
+
+            context.getLogger().log("File to process: " + sourceKey);
+            context.getLogger().log("Image processing started for: " + sourceKey);
+
+            sesUtil.sendProcessingStartedEmail(userEmail,sourceKey);
+
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
             File processedFile = processImage(unprocessedFile, WATERMARK_TEXT, context);
-            uploadProcessedFile(sourceKey, processedFile, context);
+
+            context.getLogger().log("Image processing completed for: " + sourceKey);
+            sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
+
+//            savePhotoToDynamoDB("userId", sourceKey, versionId);
+
+            context.getLogger().log("Deleting unprocessed file: " + sourceKey);
+            deleteUnprocessedFile(sourceKey, context);
             return successMessage(sourceKey);
         } catch (Exception e) {
+            sesUtil.sendProcessingFailedEmail(userEmail, sourceKey, e.getMessage());
             throw new RuntimeException(e);
         }
         finally {
@@ -68,9 +97,10 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 .exportPath(processedFile.getAbsolutePath())
                 .build();
         processor.addWatermark(request);
-        context.getLogger().log("Image proceesed successfully: "+processedFile.getAbsolutePath());
+        context.getLogger().log("Image processed successfully: "+processedFile.getAbsolutePath());
         return processedFile;
     }
+
 
     private String successMessage(String sourceKey) {
         return "File successfully processed and uploaded: "+MAIN_BUCKET + "/" + buildDestinationKey(sourceKey);
@@ -84,25 +114,8 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 .build();
     }
 
-    // Extract the key from the source
-    private String extractSourceKey(SQSEvent sqsEvent, Context context) throws Exception {
-        JsonNode s3 = getS3Record(sqsEvent);
-        JsonNode object = s3.get("object");
-        String sourceKey = object.get("key").asText();
-        return URLDecoder.decode(sourceKey, StandardCharsets.UTF_8);
-    }
 
-    /**
-     * Validate the bucket from the event
-     */
-    private void validateBucket(SQSEvent sqsEvent, Context context) throws Exception {
-        JsonNode s3 = getS3Record(sqsEvent);
-        JsonNode bucket = s3.get("bucket");
-        String eventBucket = bucket.get("name").asText();
-        if (!eventBucket.equals(STAGING_BUCKET)) {
-            logWarning(context, "Unexpected bucket event: " + eventBucket);
-        }
-    }
+
 
     /**
      * Download file from S3 Bucket
@@ -129,23 +142,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         return s3Client.getObjectAsBytes(getObjectRequest);
     }
 
-    /**
-     * Get the s3 object from the sqsEvent
-     */
-    private JsonNode getS3Record(SQSEvent sqsEvent) throws Exception {
-        String messageBody = sqsEvent.getRecords().get(0).getBody();
-        JsonNode root = parseS3Event(messageBody);
-        JsonNode s3Record = root.get("Records").get(0);
-        JsonNode s3Object = s3Record.get("s3");
-        return s3Object;
-    }
 
-    /**
-     * Parse the S3 event from the message body
-     */
-    private JsonNode parseS3Event(String messageBody) throws Exception {
-        return objectMapper.readTree(messageBody);
-    }
 
     private static void logWarning(Context context,String message){
         context.getLogger().log(message);
@@ -167,10 +164,10 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private void uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
+    private String uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
         String destinationKey = buildDestinationKey(sourceKey);
         byte[] fileBytes = readFileToBytes(processedFile);
-        uploadFileToS3(destinationKey, fileBytes, context);
+        return uploadFileToS3(destinationKey, fileBytes, context);
     }
 
     private String buildDestinationKey(String sourceKey) {
@@ -184,13 +181,20 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private void uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
+    private String uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(MAIN_BUCKET)
                 .key(destinationKey)
                 .build();
-        s3Client.putObject(putRequest, RequestBody.fromBytes(fileData));
+        PutObjectResponse response = s3Client.putObject(putRequest, RequestBody.fromBytes(fileData));
+        String versionId = response.versionId();
+        String fileUrl = s3Client.utilities().getUrl(GetUrlRequest.builder()
+                .bucket(MAIN_BUCKET)
+                .key(destinationKey)
+                .build()).toString();
         context.getLogger().log("File uploaded: " + MAIN_BUCKET + "/" + destinationKey);
+        context.getLogger().log("File uploaded with version ID: " + versionId);
+        return versionId;
     }
 
     private String failureMessage(String errorMessage) {
@@ -204,4 +208,30 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private SESUtil getSesUtil() {
         return new SESUtil();
     }
+
+    /**
+     * Write a delete method so that it will delete the unprocessed image from the source bucket
+
+     */
+    private void deleteUnprocessedFile(String sourceKey, Context context) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(STAGING_BUCKET)
+                .key(sourceKey)
+                .build();
+        s3Client.deleteObject(deleteRequest);
+        context.getLogger().log("Unprocessed file deleted: " + STAGING_BUCKET + "/" + sourceKey);
+    }
+
+    private Photo savePhotoToDynamoDB(String userId, String imageUrl,  String versionId) {
+        Photo newImage = Photo.builder()
+                .userId(userId)
+                .imageUrl(imageUrl)
+                .status(Photo.Status.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .versionId(versionId)
+                .build();
+        return newImage;
+    }
+
 }
