@@ -15,7 +15,7 @@ import com.photoblog.utils.PhotoShareResponse;
 import com.photoblog.utils.S3Util;
 
 public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private final S3Util s3Util;
+    protected S3Util s3Util;
     private final ObjectMapper mapper;
 
     public PhotoShareHandler() {
@@ -35,7 +35,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
 
             Photo photo = DynamoDBUtil.getPhotoById(userId, photoId);
             if(photo == null) {
-                return response.withBody(mapper.writeValueAsString(new PhotoShareResponse("Failed to fetch link. Not authorizef")));
+                return response.withBody(mapper.writeValueAsString(new PhotoShareResponse("Failed to fetch link. Not authorized"))).withStatusCode(500);
             }
 
             String shareLink = s3Util.getImage(userId, photoId);
@@ -46,8 +46,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withBody(body).withStatusCode(200);
         } 
         catch (RuntimeException e) {
-            context.getLogger().log(e.getMessage());
-            PhotoShareResponse errorResponse = new PhotoShareResponse("ERROR: " + e.getMessage());
+            PhotoShareResponse errorResponse = new PhotoShareResponse("There was an error while generating the link");
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
             } catch (Exception jsonEx) {
@@ -56,8 +55,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withStatusCode(500);
         }
         catch (Exception e) {
-            context.getLogger().log(e.getMessage() + " INSIDE THE EXCEPTION CATCH BLOCK");
-            PhotoShareResponse errorResponse = new PhotoShareResponse("ERROR: " + e.getMessage());
+            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error");
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
             } catch (Exception jsonEx) {
