@@ -738,6 +738,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -772,6 +775,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -800,6 +806,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -828,6 +837,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PhotosTable
@@ -856,6 +868,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
@@ -884,6 +899,9 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          APP_NAME: !Ref AppName
+          STAGE: !Ref StageName
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
