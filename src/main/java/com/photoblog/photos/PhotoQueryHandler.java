@@ -13,7 +13,6 @@ import com.photoblog.utils.S3Util;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
