@@ -1,0 +1,165 @@
+name: Deploy Primary Region
+
+on:
+  push:
+    branches: [ main, dev ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build with Maven
+        run: mvn clean package
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Debug - List files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -la
+          echo "Checking if primary-template.yaml exists:"
+          if [ -f "primary-template.yaml" ]; then
+            echo "File exists"
+            cat primary-template.yaml | head -n 10
+          else
+            echo "File does not exist"
+          fi
+
+      - name: Build with SAM
+        run: sam build -t primary-template.yaml
+
+      - name: Debug - Check build output
+        run: |
+          echo "Checking .aws-sam directory:"
+          ls -la .aws-sam/
+          echo "Checking build directory:"
+          ls -la .aws-sam/build/
+          echo "Checking template file:"
+          find .aws-sam -name "*.yaml"
+
+      - name: Get backup resources from eu-central-1
+        id: get-backup-resources
+        run: |
+          echo "Attempting to fetch backup resources from CloudFormation stack..."
+          
+          set +e  # Don't exit on error
+          
+          BACKUP_BUCKET_ARN=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupBucketArn'].OutputValue" \
+            --output text)
+          
+          BACKUP_USER_POOL_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolId'].OutputValue" \
+            --output text)
+          
+          BACKUP_USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks \
+            --stack-name photo-blog-backup \
+            --region eu-central-1 \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupUserPoolClientId'].OutputValue" \
+            --output text)
+          
+          set -e  # Return to exit on error
+          
+          # Check if values were retrieved successfully
+          if [ -z "$BACKUP_BUCKET_ARN" ] || [ "$BACKUP_BUCKET_ARN" == "None" ]; then
+            echo "Warning: Failed to retrieve BackupBucketArn"
+            echo "BACKUP_BUCKET_ARN=MISSING" >> $GITHUB_ENV
+          else
+            echo "Successfully retrieved BackupBucketArn: $BACKUP_BUCKET_ARN"
+            echo "BACKUP_BUCKET_ARN=$BACKUP_BUCKET_ARN" >> $GITHUB_ENV
+          fi
+          
+          if [ -z "$BACKUP_USER_POOL_ID" ] || [ "$BACKUP_USER_POOL_ID" == "None" ]; then
+            echo "Warning: Failed to retrieve BackupUserPoolId"
+            echo "BACKUP_USER_POOL_ID=MISSING" >> $GITHUB_ENV
+          else
+            echo "Successfully retrieved BackupUserPoolId: $BACKUP_USER_POOL_ID"
+            echo "BACKUP_USER_POOL_ID=$BACKUP_USER_POOL_ID" >> $GITHUB_ENV
+          fi
+          
+          if [ -z "$BACKUP_USER_POOL_CLIENT_ID" ] || [ "$BACKUP_USER_POOL_CLIENT_ID" == "None" ]; then
+            echo "Warning: Failed to retrieve BackupUserPoolClientId"
+            echo "BACKUP_USER_POOL_CLIENT_ID=MISSING" >> $GITHUB_ENV
+          else
+            echo "Successfully retrieved BackupUserPoolClientId: $BACKUP_USER_POOL_CLIENT_ID"
+            echo "BACKUP_USER_POOL_CLIENT_ID=$BACKUP_USER_POOL_CLIENT_ID" >> $GITHUB_ENV
+          fi
+
+      - name: Verify backup resources
+        run: |
+          echo "Verifying backup resources..."
+          
+          if [ "$BACKUP_BUCKET_ARN" == "MISSING" ] || [ "$BACKUP_USER_POOL_ID" == "MISSING" ] || [ "$BACKUP_USER_POOL_CLIENT_ID" == "MISSING" ]; then
+            echo "WARNING: One or more backup resources are missing. This might cause deployment issues."
+            echo "Make sure the backup region deployment has completed successfully."
+          else
+            echo "All backup resources retrieved successfully."
+          fi
+
+      - name: Create S3 Bucket if it does not exist
+        run: |
+          BUCKET_NAME="my-photo-blog-deployment-bucket"
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket $BUCKET_NAME already exists"
+          else
+            echo "Creating bucket $BUCKET_NAME"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1
+          fi
+        env:
+          AWS_DEFAULT_REGION: eu-west-1
+
+      - name: Deploy CloudFormation stack
+        run: |
+          # Find the template file
+          TEMPLATE_FILE=$(find .aws-sam -name "template.yaml" | head -n 1)
+          if [ -z "$TEMPLATE_FILE" ]; then
+            echo "Could not find template.yaml, looking for primary-template.yaml"
+            TEMPLATE_FILE=$(find .aws-sam -name "primary-template.yaml" | head -n 1)
+          fi
+          
+          # Check if template file was found
+          if [ -z "$TEMPLATE_FILE" ]; then
+            echo "Error: Could not find any template file in .aws-sam directory"
+            exit 1
+          fi
+          
+          echo "Using template file: $TEMPLATE_FILE"
+          
+          sam deploy \
+            --template-file "$TEMPLATE_FILE" \
+            --stack-name photo-blog-primary \
+            --parameter-overrides \
+              AppName=photo-blog-group1 \
+              StageName=dev \
+              BackupRegion=eu-central-1 \
+              BackupBucketArn=${{ env.BACKUP_BUCKET_ARN }} \
+              BackupUserPoolId=${{ env.BACKUP_USER_POOL_ID }} \
+              BackupUserPoolClientId=${{ env.BACKUP_USER_POOL_CLIENT_ID }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --s3-bucket my-photo-blog-deployment-bucket
