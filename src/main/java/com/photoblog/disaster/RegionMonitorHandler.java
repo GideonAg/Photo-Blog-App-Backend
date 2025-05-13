@@ -31,11 +31,11 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
     private final SNSUtil snsUtil = new SNSUtil();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final AtomicInteger consecutiveFailures = new AtomicInteger(0);
-    private static final int FAILURE_THRESHOLD = 2;
+    private static final int FAILURE_THRESHOLD = 0;
 
     private final String primaryRegion = System.getenv("PRIMARY_REGION");
     private final String triggerFunctionArn = System.getenv("TRIGGER_FUNCTION_ARN");
-    private final String systemAlertTopic = System.getenv("SYSTEM_ALERT_TOPIC");
+    private final String systemAlertTopic = System.getenv("BACKUP_ALERT_TOPIC");
     private final String apiGatewayId = System.getenv("API_GATEWAY_ID");
 
     @Override
@@ -60,7 +60,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     invokeDisasterRecoveryTrigger(context);
                     response.put("status", "triggered");
                     response.put("message", "Disaster recovery triggered due to primary region outage");
-                    consecutiveFailures.set(0); // Reset after triggering
+                    consecutiveFailures.set(0);
                     alertMessage.put("event", "disaster_recovery_triggered");
                     alertMessage.put("details", "DR triggered due to " + failures + " consecutive failures");
                     snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
@@ -69,7 +69,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     response.put("message", "Primary region unhealthy, waiting for threshold (" + failures + "/" + FAILURE_THRESHOLD + ")");
                 }
             } else {
-                consecutiveFailures.set(0); // Reset on healthy check
+                consecutiveFailures.set(0);
                 response.put("status", "healthy");
                 response.put("message", "Primary region is healthy");
                 snsUtil.publishMessage(systemAlertTopic, alertMessage, context);

@@ -18,7 +18,7 @@ public class DisasterRecoveryTriggerHandler implements RequestHandler<Map<String
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final String restoreFunctionArn = System.getenv("RESTORE_FUNCTION_ARN");
-    private final String systemAlertTopic = System.getenv("SYSTEM_ALERT_TOPIC");
+    private final String systemAlertTopic = System.getenv("BACKUP_ALERT_TOPIC");
 
     @Override
     public Map<String, String> handleRequest(Map<String, String> input, Context context) {
