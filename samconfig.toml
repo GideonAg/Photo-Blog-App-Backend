@@ -1,0 +1,24 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "photoblog-backend"
+s3_prefix = "photoblog-backend"
+region = "eu-west-1"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = "Stage=\"dev\" DomainName=\"mscv2group1.link\" DisasterRecoveryRegion=\"eu-central-1\""
+confirm_changeset = true
+fail_on_empty_changeset = false
+tags = "project=\"MSC2\" application=\"PhotoBlog\""
+
+[prod]
+[prod.deploy]
+[prod.deploy.parameters]
+stack_name = "photoblog-backend-prod"
+s3_prefix = "photoblog-backend-prod"
+region = "eu-west-1"
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = "Stage=\"prod\" DomainName=\"mscv2group1.link\" DisasterRecoveryRegion=\"eu-central-1\""
+confirm_changeset = true
+fail_on_empty_changeset = false
+tags = "project=\"MSC2\" application=\"PhotoBlog\" environment=\"production\""
