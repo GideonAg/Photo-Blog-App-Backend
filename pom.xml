@@ -35,30 +35,30 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-dynamodb</artifactId>
       <version>1.12.782</version>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>dynamodb</artifactId>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
       <version>2.31.35</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sqs</artifactId>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
       <version>2.25.40</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>ses</artifactId>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
       <version>2.25.40</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sns</artifactId>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
       <version>2.28.22</version>
       <exclusions>
         <exclusion>
@@ -75,7 +75,7 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
-      <version>2.31.36</version>
+      <version>${aws.java.sdk.version}</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -86,20 +86,20 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
       <version>2.20.56</version>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
     </dependency>
 
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>cognitoidentityprovider</artifactId>
       <version>${aws.java.sdk.version}</version>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
     </dependency>
 
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>url-connection-client</artifactId>
-      <scope>provided</scope>
+      <!-- <scope>provided</scope> -->
       <version>2.25.40</version>
     </dependency>
 
@@ -118,11 +118,11 @@
       <artifactId>health</artifactId>
       <version>2.21.0</version>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
       <version>2.30.37</version>
-    </dependency>
+    </dependency> -->
 
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -135,11 +135,11 @@
       <artifactId>crac</artifactId>
       <version>1.4.0</version>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
       <version>2.30.37</version>
-    </dependency>
+    </dependency> -->
 
     <dependency>
     <groupId>org.junit.jupiter</groupId>
@@ -156,17 +156,17 @@
     </dependency>
 
     <dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-core</artifactId>
-    <version>5.12.0</version>
-    <scope>test</scope>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.12.0</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
-    <groupId>org.mockito</groupId>
-    <artifactId>mockito-junit-jupiter</artifactId>
-    <version>5.12.0</version>
-    <scope>test</scope>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>5.12.0</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -174,7 +174,11 @@
       <artifactId>thumbnailator</artifactId>
       <version>0.4.20</version>
     </dependency>
-
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.10.1</version>
+    </dependency>
     <!-- https://mvnrepository.com/artifact/org.junit-pioneer/junit-pioneer -->
     <dependency>
         <groupId>org.junit-pioneer</groupId>

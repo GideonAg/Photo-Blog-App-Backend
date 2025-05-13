@@ -610,6 +610,8 @@ Resources:
                 uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationHandler.Arn}/invocations"
                 httpMethod: POST
                 type: aws_proxy
+              security:
+                - NONE: [ ]
             options:
               produces:
                 - application/json
@@ -653,6 +655,8 @@ Resources:
                 uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
                 httpMethod: POST
                 type: aws_proxy
+              security:
+                - NONE: [ ]
             options:
               produces:
                 - application/json
@@ -1062,6 +1066,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /auth/login
             Method: post
+            Auth:
+              Authorizer: NONE
 
   CreateUserHandler:
     Type: AWS::Serverless::Function
@@ -1092,6 +1098,8 @@ Resources:
             RestApiId: !Ref PhotoBlogApi
             Path: /auth/signup
             Method: post
+            Auth:
+              Authorizer: NONE
 
   SystemAlertFunction:
     Type: AWS::Serverless::Function
