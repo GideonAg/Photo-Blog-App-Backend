@@ -933,6 +933,7 @@ Resources:
           DOMAIN_NAME: !Ref DomainName
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
+          EMAIL_SENDER: !Ref EmailSender
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
