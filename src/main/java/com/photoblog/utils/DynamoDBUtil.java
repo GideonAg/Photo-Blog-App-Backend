@@ -90,10 +90,14 @@ public class DynamoDBUtil {
         expressionAttributeValues.put(":userId", new AttributeValue().withS(userId));
         expressionAttributeValues.put(":status", new AttributeValue().withS(status.name()));
 
+        Map<String, String> expressionAttributeNames = new HashMap<>();
+        expressionAttributeNames.put("#status", "status");
+
         DynamoDBQueryExpression<Photo> queryExpression = new DynamoDBQueryExpression<Photo>()
                 .withKeyConditionExpression("userId = :userId")
-                .withFilterExpression("status = :status")
+                .withFilterExpression("#status = :status")
                 .withExpressionAttributeValues(expressionAttributeValues)
+                .withExpressionAttributeNames(expressionAttributeNames)
                 .withIndexName("UserIdIndex")
                 .withConsistentRead(false);
 
