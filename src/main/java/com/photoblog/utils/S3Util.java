@@ -1,5 +1,6 @@
 package com.photoblog.utils;
 
+import lombok.Getter;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -10,8 +11,10 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.time.Duration;
 
 public class S3Util {
+    @Getter
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
+    @Getter
     private final String mainBucket;
 
     public S3Util() {

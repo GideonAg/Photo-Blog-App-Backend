@@ -23,10 +23,19 @@ public class QueueUtil {
         this.objectMapper = new ObjectMapper();
     }
 
-    public SendMessageResponse sendToQueue(String objectKey, String firstName, String lastName, LocalDateTime uploadTimestamp) throws Exception {
+    public SendMessageResponse sendToQueue(
+            String objectKey,
+            String userId,
+            String email,
+            String firstName,
+            String lastName,
+            LocalDateTime uploadTimestamp
+    ) throws Exception {
         Map<String, String> messageBody = new HashMap<>();
         messageBody.put("objectKey", objectKey);
         messageBody.put("uploadDate", String.valueOf(uploadTimestamp));
+        messageBody.put("userId", userId);
+        messageBody.put("email", email);
         messageBody.put("firstName", firstName);
         messageBody.put("lastName", lastName);
         messageBody.put("bucket", bucketName);

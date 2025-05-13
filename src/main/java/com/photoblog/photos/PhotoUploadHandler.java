@@ -49,9 +49,15 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
         try {
             Map<String, String> claims = AuthorizerClaims.extractCognitoClaims(request);
             if (claims.isEmpty()) return buildErrorResponse(response, 401, "Unauthorized");
-            String userName = claims.get("cognito:username");
-            String firstName = claims.get("custom:firstName");
-            String lastName = claims.get("custom:lastName");
+            String userEmail = claims.get("email");
+            String userId = claims.get("userId");
+            String firstName = claims.get("firstName");
+            String lastName = claims.get("lastName");
+            if(userEmail == null || userId == null){
+                return buildErrorResponse(response, 401, "Unauthorized:");
+            }
+            context.getLogger().log("User email: " + userEmail + "UserId: " + userId);
+
             if (request.getBody() == null || request.getBody().isEmpty()) {
                 return buildErrorResponse(response, 400, "Request body is empty");
             }
@@ -65,9 +71,9 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             String base64Image = (String) requestBody.get("image");
             String contentType = (String) requestBody.get("contentType");
-            String fileName = userName + System.currentTimeMillis();
+            String fileName = userEmail + System.currentTimeMillis();
 
-            if (base64Image == null || contentType == null) {
+            if (base64Image == null || base64Image.isEmpty() || contentType == null) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
             if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
@@ -81,7 +87,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileName, imagesBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, firstName, lastName, LocalDateTime.now());
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userId, userEmail, firstName, lastName, LocalDateTime.now());
                 context.getLogger().log("SQS message sent with ID: " + sqsResponse.messageId());
 
                 String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
