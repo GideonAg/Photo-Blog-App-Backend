@@ -6,15 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.photoblog.utils.ClaimsUtil;
-import com.photoblog.utils.HeadersUtil;
-import com.photoblog.utils.QueueUtil;
-import com.photoblog.utils.UploadUtil;
+import com.photoblog.utils.*;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 import java.time.LocalDateTime;
@@ -22,29 +17,24 @@ import java.util.*;
 
 public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final S3Client s3Client;
-    private final SqsClient sqsClient;
     private final String bucketName;
-    private final String sqsQueueUrl;
     private final ObjectMapper objectMapper;
     private final Region region;
     private final UploadUtil uploadUtil;
-    //    private final Utils utils;
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
     private final Map<String, String> headers = HeadersUtil.getHeaders();
-    private final ClaimsUtil claimsUtil = new ClaimsUtil();
     private final QueueUtil queueUtil = new QueueUtil();
+    private static final long MAX_IMAGE_SIZE_BYTES = 6 * 1024 * 1024;
 
     public PhotoUploadHandler() {
 
         this.bucketName = System.getenv("STAGING_BUCKET");
-        this.sqsQueueUrl = System.getenv("IMAGE_PROCESSING_QUEUE");
         String regionName = System.getenv("PRIMARY_REGION");
         this.region = regionName != null && !regionName.isEmpty()
                 ? Region.of(regionName)
                 : Region.EU_CENTRAL_1;
 
         this.s3Client = S3Client.builder().region(this.region).build();
-        this.sqsClient = SqsClient.builder().region(this.region).build();
         this.objectMapper = new ObjectMapper();
         this.uploadUtil = new UploadUtil(bucketName, s3Client);
     }
@@ -57,16 +47,15 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
         response.setHeaders(headers);
 
         try {
-            Map<String, String> claims = claimsUtil.getClaims(request, context);
+            Map<String, String> claims = AuthorizerClaims.extractCognitoClaims(request);
             if (claims.isEmpty()) return buildErrorResponse(response, 401, "Unauthorized");
             String userName = claims.get("cognito:username");
-            if (userName.isEmpty()) {
-                context.getLogger().log("Error:" + userName + " UserName not found");
-                return buildErrorResponse(response, 404, "UserName not found");
-            }
+            String firstName = claims.get("custom:firstName");
+            String lastName = claims.get("custom:lastName");
             if (request.getBody() == null || request.getBody().isEmpty()) {
                 return buildErrorResponse(response, 400, "Request body is empty");
             }
+
             Map<String, Object> requestBody = objectMapper.readValue(
                     request.getBody(),
                     new TypeReference<>() {
@@ -86,10 +75,13 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             }
 
             byte[] imagesBytes = Base64.getDecoder().decode(base64Image);
+            if (imagesBytes.length > MAX_IMAGE_SIZE_BYTES) {
+                return buildErrorResponse(response, 400, "Image size exceeds maximum allowed size of 6MB");
+            }
 
             PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileName, imagesBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userName, LocalDateTime.now());
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, firstName, lastName, LocalDateTime.now());
                 context.getLogger().log("SQS message sent with ID: " + sqsResponse.messageId());
 
                 String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileName;

@@ -14,13 +14,8 @@ Globals:
         PHOTOS_TABLE: !Ref PhotosTable
         MAIN_BUCKET: !Ref MainBucket
         DOMAIN_NAME: !Ref DomainName
-        PRIMARY_REGION: !Ref AWS::Region
-        BACKUP_REGION: !Ref AWS::Region
-    Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref PhotosTable
-      - S3CrudPolicy:
-          BucketName: !Ref MainBucket
+        PRIMARY_REGION: !Ref PrimaryRegion
+        BACKUP_REGION: !Ref BackupRegion
 
 Parameters:
   AppName:
@@ -74,9 +69,9 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [ !Sub '*' ]
+          - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub '*' ]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
 
   MainBucket:
@@ -87,10 +82,9 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: [!Sub '*']
-            AllowedMethods: [GET, POST, DELETE]
-            AllowedOrigins: [!Sub '*']
-#            AllowedOrigins: [!Sub "https://${DomainName}"]
+          - AllowedHeaders: [ '*' ]
+            AllowedMethods: [ GET, POST, DELETE ]
+            AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -124,7 +118,7 @@ Resources:
           - Sid: AllowReplication
             Effect: Allow
             Principal:
-              AWS: !GetAtt ReplicationRole.Arn
+              AWS: !Sub "arn:aws:iam::${PrimaryAccountId}:role/service-role/${AppName}-${StageName}-s3-replication-role"
             Action:
               - s3:ReplicateObject
               - s3:ReplicateDelete
@@ -685,6 +679,10 @@ Resources:
           IMAGE_PROCESSING_QUEUE: !Ref ImageProcessingQueue
           USER_NOTIFICATION_TOPIC: !Ref UserNotificationTopic
       Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ImageProcessingQueue.QueueName
         - SNSPublishMessagePolicy:
@@ -726,6 +724,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.PhotoDeleteHandler::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -775,6 +778,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::restorePhoto
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
@@ -788,6 +796,11 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.photos.RecycleBinHandler::permanentlyDeletePhoto
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PhotosTable
+        - S3CrudPolicy:
+            BucketName: !Ref MainBucket
       Events:
         ApiEvent:
           Type: Api
