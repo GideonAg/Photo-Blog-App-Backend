@@ -945,6 +945,15 @@ Resources:
             TopicName: !GetAtt UserNotificationTopic.TopicName
         - SQSSendMessagePolicy:
             QueueName: !GetAtt ProcessingRetryQueue.QueueName
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailSender}"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
       Events:
         SQSEvent:
           Type: SQS
