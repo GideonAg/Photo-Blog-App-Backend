@@ -12,12 +12,14 @@ import java.util.Map;
 public class QueueUtil {
     private final String bucketName;
     private final String sqsQueueUrl;
+    private final String deadLetterQueueUrl;
     private final ObjectMapper objectMapper;
     private final SqsClient sqsClient = SqsClient.builder().build();
 
     public QueueUtil() {
         this.bucketName = System.getenv("STAGING_BUCKET");
         this.sqsQueueUrl = System.getenv("IMAGE_PROCESSING_QUEUE");
+        this.deadLetterQueueUrl = System.getenv("DEAD_LETTER_QUEUE");
         this.objectMapper = new ObjectMapper();
     }
 
@@ -52,5 +54,9 @@ public class QueueUtil {
                 .messageBody(messageJson)
                 .build();
         return sqsClient.sendMessage(sendMessageRequest);
+ 
     }
+
+    
+    
 }

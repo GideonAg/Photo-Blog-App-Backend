@@ -25,29 +25,14 @@ import java.util.Objects;
 @EqualsAndHashCode(exclude = "inputFile")
 @ToString(exclude = "inputFile")
 public class ImageProcessingRequest {
-    /**
-     * The file path of the input image.
-     */
-    private String inputFileName;
 
-    /**
-     * The file path where the processed image will be saved.
-     */
+    private File inputFile;
+
+
     private String exportPath;
 
-    /**
-     * The watermark text to be applied on the image.
-     */
-    private String watermarkText;
 
-    /**
-     * Lazily creates and returns a File object for the input image.
-     *
-     * @return The File object for the input image, or null if inputFileName is null.
-     */
-    public File getInputFile() {
-        return createFileIfPathExists(inputFileName);
-    }
+    private String watermarkText;
 
     /**
      * Creates a File object from the given path if the path is not null.
