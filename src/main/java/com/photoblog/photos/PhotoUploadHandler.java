@@ -49,7 +49,8 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
         try {
             Map<String, String> claims = AuthorizerClaims.extractCognitoClaims(request);
             if (claims.isEmpty()) return buildErrorResponse(response, 401, "Unauthorized");
-            String userName = claims.get("cognito:username");
+            String userEmail = claims.get("cognito:username");
+            String userId = claims.get("custom:userId");
             String firstName = claims.get("custom:firstName");
             String lastName = claims.get("custom:lastName");
             if (request.getBody() == null || request.getBody().isEmpty()) {
@@ -65,7 +66,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             String base64Image = (String) requestBody.get("image");
             String contentType = (String) requestBody.get("contentType");
-            String fileName = userName + System.currentTimeMillis();
+            String fileName = userEmail + System.currentTimeMillis();
 
             if (base64Image == null || contentType == null) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
@@ -81,7 +82,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileName, imagesBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, firstName, lastName, LocalDateTime.now());
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userId, userEmail, firstName, lastName, LocalDateTime.now());
                 context.getLogger().log("SQS message sent with ID: " + sqsResponse.messageId());
 
                 String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
