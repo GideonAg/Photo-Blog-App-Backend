@@ -52,13 +52,19 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 String messageBody = message.getBody();
                 context.getLogger().log("Processing message: " + message.getBody());
 
+
+
                 // Deserialize the message body to extract file details
                 Map<String, Object> messageMap = objectMapper.readValue(messageBody, Map.class);
-                sourceKey = (String) messageMap.get("fileName");
+                sourceKey = (String) messageMap.get("objectKey");
                 String firstName = (String) messageMap.get("firstName");
                 String lastName = (String) messageMap.get("lastName");
+                userEmail = (String) messageMap.get("email");
+                String userId = (String) messageMap.get("userId");
+                String bucketName = (String) messageMap.get("bucket");
 
 
+                validateBucket(bucketName, context);
                 context.getLogger().log("File to process: " + sourceKey + " for " + firstName + " " + lastName);
                 WATERMARK_TEXT = firstName+lastName+String.valueOf(LocalDateTime.now());
             }
@@ -115,6 +121,11 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
 
+    private void validateBucket(String bucketName, Context context){
+        if (bucketName.equals(STAGING_BUCKET)){
+            context.getLogger().log("Unexpected bucket event: " + bucketName);
+        }
+    }
 
 
     /**
