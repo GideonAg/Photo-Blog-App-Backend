@@ -21,6 +21,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
     public CreateUserHandler() {
         Core.getGlobalContext().register(this);
         mapper = new ObjectMapper();
+        initializeResources();
 
     }
 

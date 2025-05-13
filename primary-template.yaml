@@ -1006,8 +1006,15 @@ Resources:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
       Policies:
-        - SESCrudPolicy:
-            IdentityName: !Ref DomainName
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+                - 'ses:SendRawEmail'
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailSender}"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
       Events:
         PostAuthentication:
           Type: Cognito
@@ -1054,11 +1061,19 @@ Resources:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
       Policies:
-        - Statement:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
             - Effect: Allow
               Action:
-                - cognito-idp:InitiateAuth
+                - 'cognito-idp:AdminCreateUser'
+                - 'cognito-idp:AdminSetUserPassword'
               Resource: !GetAtt UserPool.Arn
+            - Effect: Allow
+              Action:
+                - 'ses:SendEmail'
+              Resource:
+                - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
       Events:
         ApiEvent:
           Type: Api
@@ -1088,8 +1103,8 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - cognito-idp:SignUp
-                - cognito-idp:AdminCreateUser
+                - 'cognito-idp:AdminCreateUser'
+                - 'cognito-idp:AdminSetUserPassword'
               Resource: !GetAtt UserPool.Arn
       Events:
         ApiEvent:
