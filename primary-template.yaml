@@ -67,7 +67,8 @@ Resources:
         CorsRules:
           - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub "https://${DomainName}" ]
+            # AllowedOrigins: [ !Sub "https://${DomainName}" ]
+            AllowedOrigins: [ '*' ]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -116,7 +117,8 @@ Resources:
         CorsRules:
           - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
-            AllowedOrigins: [ !Sub "https://${DomainName}" ]
+            # AllowedOrigins: [ !Sub "https://${DomainName}" ]
+            AllowedOrigins: [ '*' ]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -258,7 +260,8 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: !Sub "https://${DomainName}"
+        # AllowOrigin: !Sub "https://${DomainName}"
+        AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
