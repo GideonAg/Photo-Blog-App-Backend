@@ -52,7 +52,7 @@ Parameters:
     Type: String
     Description: ID of the backup API Gateway in the backup region
     Default: ""
-  BackupUserPoolArn:
+  BackUpUserPoolArn:
     Type: String
     Description: Backup User Pool ARN
     Default: ""
@@ -263,7 +263,7 @@ Resources:
       StageName: !Ref StageName
       Cors:
         AllowMethods: "'POST, GET, DELETE, OPTIONS, PUT'"
-        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
