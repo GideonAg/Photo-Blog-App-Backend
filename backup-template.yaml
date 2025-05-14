@@ -126,6 +126,7 @@ Resources:
               - s3:GetObjectVersionTagging
               - s3:GetReplicationConfiguration
               - s3:ListBucket
+              - s3:PutObject
             Resource:
               - !GetAtt BackupBucket.Arn
               - !Sub "${BackupBucket.Arn}/*"
