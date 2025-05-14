@@ -136,7 +136,7 @@ Resources:
               StorageClass: STANDARD
 
   PhotosTable:
-    Type: AWS::DynamoDB::Table
+    Type: AWS::DynamoDB::GlobalTable
     Properties:
       TableName: !Sub "${AppName}-${StageName}-photos"
       BillingMode: PAY_PER_REQUEST
@@ -164,9 +164,12 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
+      Replicas:
+        - Region: !Ref PrimaryRegion
+        - Region: !Ref BackupRegion
 
   CognitoBackupTable:
-    Type: AWS::DynamoDB::Table
+    Type: AWS::DynamoDB::GlobalTable
     Properties:
       TableName: !Sub "${AppName}-${StageName}-cognito-backup"
       BillingMode: PAY_PER_REQUEST
@@ -178,6 +181,9 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
+      Replicas:
+        - Region: !Ref PrimaryRegion
+        - Region: !Ref BackupRegion
 
   SystemAlertTopic:
     Type: AWS::SNS::Topic
@@ -1081,6 +1087,9 @@ Resources:
       Runtime: java21
       Timeout: 60
       MemorySize: 512
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -1120,6 +1129,9 @@ Resources:
       Runtime: java21
       Timeout: 60
       MemorySize: 512
+      SnapStart:
+        ApplyOn: PublishedVersions
+      AutoPublishAlias: live
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
@@ -1128,6 +1140,7 @@ Resources:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref BackupRegion
           EMAIL_SENDER: !Ref EmailSender
+          BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
       Policies:
         - Statement:
             - Effect: Allow
