@@ -30,6 +30,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
         context.getLogger().log("GOT HERE");
         try {
             if("OPTIONS".equals(input.getHttpMethod())) {
+                context.getLogger().log("Inside options block");
                 return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200);
             }
