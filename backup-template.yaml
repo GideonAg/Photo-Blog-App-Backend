@@ -192,6 +192,8 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       Replicas:
         - Region: !Ref PrimaryRegion
         - Region: !Ref BackupRegion
