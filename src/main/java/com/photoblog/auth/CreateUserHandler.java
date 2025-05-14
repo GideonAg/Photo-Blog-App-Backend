@@ -29,10 +29,11 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         context.getLogger().log("GOT HERE");
         try {
-            if("OPTIONS".equals(input.getHttpMethod())) {
+            if("OPTIONS".equalsIgnoreCase(input.getHttpMethod())) {
                 context.getLogger().log("Inside options block");
                 return new APIGatewayProxyResponseEvent()
-                    .withStatusCode(200);
+                    .withStatusCode(200)
+                    .withHeaders(headers);
             }
             CreateUserRequest request = mapper.readValue(input.getBody(), CreateUserRequest.class);
 
