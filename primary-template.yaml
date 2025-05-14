@@ -262,7 +262,7 @@ Resources:
     Properties:
       StageName: !Ref StageName
       Cors:
-        AllowMethods: "'*'"
+        AllowMethods: "'POST, GET, DELETE, OPTIONS, PUT'"
         AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
         AllowOrigin: "'*'"
       Auth:
