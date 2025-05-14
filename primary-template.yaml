@@ -326,7 +326,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -369,7 +370,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -426,7 +428,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -469,7 +472,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -512,7 +516,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -555,7 +560,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -584,7 +590,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -644,7 +651,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -689,7 +697,8 @@ Resources:
                   default:
                     statusCode: "200"
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
