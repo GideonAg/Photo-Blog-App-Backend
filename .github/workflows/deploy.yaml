@@ -216,8 +216,8 @@ jobs:
               AppName=photo-blog-group1 \
               StageName=dev \
               BackupRegion=eu-central-1 \
-              BackUpUserPoolArn=arn:aws:cognito-idp:eu-central-1:711387109786:userpool/eu-central-1_JalvJECyH \
-              BackupBucketArn=arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786 \
+              BackUpUserPoolArn="arn:aws:cognito-idp:eu-central-1:711387109786:userpool/eu-central-1_JalvJECyH" \
+              BackupBucketArn="arn:aws:s3:::photo-blog-group1-dev-backup-eu-central-1-711387109786" \
               BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
               BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
               BackupApiId=daksv35vl0 \
