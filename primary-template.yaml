@@ -52,6 +52,10 @@ Parameters:
     Type: String
     Description: ID of the backup API Gateway in the backup region
     Default: ""
+  BackupUserPoolArn:
+    Type: String
+    Description: Backup User Pool ARN
+    Default: ""
 
 Resources:
   StagingBucket:
@@ -1160,7 +1164,7 @@ Resources:
                 - 'cognito-idp:AdminSetUserPassword'
               Resource: 
                - !GetAtt UserPool.Arn
-               - !GetAtt BackupUserPool.Arn
+               - !Ref BackupUserPoolArn
             - Effect: Allow
               Action:
                 - 'ses:SendEmail'
