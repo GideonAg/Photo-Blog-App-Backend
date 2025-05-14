@@ -15,7 +15,11 @@ public class CreateUserService {
     private final CognitoIdentityProviderClient cognitoClient = CognitoIdentityProviderClient.builder()
             .region(Region.of(System.getenv("PRIMARY_REGION")))
             .build();
+    private final CognitoIdentityProviderClient backupCognitoClient = CognitoIdentityProviderClient.builder()
+            .region(Region.of(System.getenv("BACKUP_REGION")))
+            .build();
     private final String userPoolId = System.getenv("USER_POOL_ID");
+    private final String backupUserPoolId = System.getenv("BACKUP_USER_POOL_ID");
     private static final String EMAIL_TEMPLATE_PATH = "welcome.html";
     private String emailHtmlTemplate;
 
@@ -54,6 +58,27 @@ public class CreateUserService {
                 .permanent(true)
                 .build();
         cognitoClient.adminSetUserPassword(setPasswordRequest);
+
+        var createBackedUpUserRequest = AdminCreateUserRequest.builder()
+                .userPoolId(backupUserPoolId)
+                .username(email)
+                .userAttributes(
+                        AttributeType.builder().name("email").value(email).build(),
+                        AttributeType.builder().name("email_verified").value("true").build(),
+                        AttributeType.builder().name("custom:firstName").value(firstName).build(),
+                        AttributeType.builder().name("custom:lastName").value(lastName).build()
+                )
+                .messageAction(MessageActionType.SUPPRESS)
+                .build();
+        backupCognitoClient.adminCreateUser(createBackedUpUserRequest);
+
+        var backupSetPasswordRequest = AdminSetUserPasswordRequest.builder()
+                .userPoolId(backupUserPoolId)
+                .username(email)
+                .password(password)
+                .permanent(true)
+                .build();
+        backupCognitoClient.adminSetUserPassword(backupSetPasswordRequest);
 
         sendWelcomeEmail(email, firstName);
         return CreateUserResponse.builder()
