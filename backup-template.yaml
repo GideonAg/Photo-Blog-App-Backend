@@ -938,32 +938,32 @@ Resources:
   #       - SNSPublishMessagePolicy:
   #           TopicName: !GetAtt BackupAlertTopic.TopicName
 
-  DisasterRecoveryTriggerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource: !GetAtt RestoreHandlerFunction.Arn
-      Events:
-        AlarmTrigger:
-          Type: SNS
-          Properties:
-            Topic: !Ref BackupAlertTopic
+  # DisasterRecoveryTriggerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref AWS::Region
+  #         BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt BackupAlertTopic.TopicName
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - lambda:InvokeFunction
+  #             Resource: !GetAtt RestoreHandlerFunction.Arn
+  #     Events:
+  #       AlarmTrigger:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref BackupAlertTopic
 
   Route53FailoverHandler:
     Type: AWS::Serverless::Function
