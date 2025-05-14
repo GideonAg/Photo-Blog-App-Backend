@@ -52,7 +52,7 @@ Parameters:
     Type: String
     Description: ID of the backup API Gateway in the backup region
     Default: ""
-  BackupUserPoolArn:
+  BackUpUserPoolArn:
     Type: String
     Description: Backup User Pool ARN
     Default: ""
