@@ -1164,7 +1164,7 @@ Resources:
                 - 'cognito-idp:AdminSetUserPassword'
               Resource: 
                - !GetAtt UserPool.Arn
-               - !Ref BackupUserPoolArn
+               - !Ref BackUpUserPoolArn
             - Effect: Allow
               Action:
                 - 'ses:SendEmail'
