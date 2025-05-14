@@ -68,7 +68,7 @@ Resources:
           - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
             # AllowedOrigins: [ !Sub "https://${DomainName}" ]
-            AllowedOrigins: [ '*' ]
+            AllowedOrigins: [ 'http:localhost:5173' ]
             MaxAge: 3600
 
   S3ReplicationRole:
@@ -118,7 +118,7 @@ Resources:
           - AllowedHeaders: [ '*' ]
             AllowedMethods: [ GET, POST, DELETE ]
             # AllowedOrigins: [ !Sub "https://${DomainName}" ]
-            AllowedOrigins: [ '*' ]
+            AllowedOrigins: [ 'http:localhost:5173' ]
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
@@ -261,7 +261,7 @@ Resources:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
         # AllowOrigin: !Sub "https://${DomainName}"
-        AllowOrigin: "'*'"
+        AllowOrigin: "'http:localhost:5173'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
@@ -327,7 +327,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -371,7 +371,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -429,7 +429,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -473,7 +473,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -517,7 +517,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -561,7 +561,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -591,7 +591,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -652,7 +652,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
@@ -698,7 +698,7 @@ Resources:
                     statusCode: "200"
                     responseParameters:
                       # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                      method.response.header.Access-Control-Allow-Origin: "'http:localhost:5173'"
                       method.response.header.Access-Control-Allow-Methods: "'*'"
                       method.response.header.Access-Control-Allow-Headers: "'*'"
                     responseTemplates:
