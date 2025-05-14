@@ -135,55 +135,55 @@ Resources:
               Bucket: !Ref BackupBucketArn
               StorageClass: STANDARD
 
-  PhotosTable:
-    Type: AWS::DynamoDB::GlobalTable
-    Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: photoId
-          AttributeType: S
-        - AttributeName: userId
-          AttributeType: S
-        - AttributeName: createdAt
-          AttributeType: S
-      KeySchema:
-        - AttributeName: photoId
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: UserIdIndex
-          KeySchema:
-            - AttributeName: userId
-              KeyType: HASH
-            - AttributeName: createdAt
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      TimeToLiveSpecification:
-        AttributeName: expiresAt
-        Enabled: true
-      Replicas:
-        - Region: !Ref PrimaryRegion
-        - Region: !Ref BackupRegion
+#  PhotosTable:
+#    Type: AWS::DynamoDB::GlobalTable
+#    Properties:
+#      TableName: !Sub "${AppName}-${StageName}-photos"
+#      BillingMode: PAY_PER_REQUEST
+#      AttributeDefinitions:
+#        - AttributeName: photoId
+#          AttributeType: S
+#        - AttributeName: userId
+#          AttributeType: S
+#        - AttributeName: createdAt
+#          AttributeType: S
+#      KeySchema:
+#        - AttributeName: photoId
+#          KeyType: HASH
+#      GlobalSecondaryIndexes:
+#        - IndexName: UserIdIndex
+#          KeySchema:
+#            - AttributeName: userId
+#              KeyType: HASH
+#            - AttributeName: createdAt
+#              KeyType: RANGE
+#          Projection:
+#            ProjectionType: ALL
+#      StreamSpecification:
+#        StreamViewType: NEW_AND_OLD_IMAGES
+#      TimeToLiveSpecification:
+#        AttributeName: expiresAt
+#        Enabled: true
+#      Replicas:
+#        - Region: !Ref PrimaryRegion
+#        - Region: !Ref BackupRegion
 
-  CognitoBackupTable:
-    Type: AWS::DynamoDB::GlobalTable
-    Properties:
-      TableName: !Sub "${AppName}-${StageName}-cognito-backup"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Replicas:
-        - Region: !Ref PrimaryRegion
-        - Region: !Ref BackupRegion
+#  CognitoBackupTable:
+#    Type: AWS::DynamoDB::GlobalTable
+#    Properties:
+#      TableName: !Sub "${AppName}-${StageName}-cognito-backup"
+#      BillingMode: PAY_PER_REQUEST
+#      AttributeDefinitions:
+#        - AttributeName: id
+#          AttributeType: S
+#      KeySchema:
+#        - AttributeName: id
+#          KeyType: HASH
+#      StreamSpecification:
+#        StreamViewType: NEW_AND_OLD_IMAGES
+#      Replicas:
+#        - Region: !Ref PrimaryRegion
+#        - Region: !Ref BackupRegion
 
   SystemAlertTopic:
     Type: AWS::SNS::Topic
