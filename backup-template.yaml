@@ -194,9 +194,6 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      Replicas:
-        - Region: !Ref PrimaryRegion
-        - Region: !Ref BackupRegion
 
   CognitoBackupTable:
     Type: AWS::DynamoDB::Table
@@ -912,34 +909,34 @@ Resources:
             Path: /auth/signup
             Method: post
 
-  RestoreHandlerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.RestoreHandler::handleRequest
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
-          BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
-          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CognitoBackupTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-                - s3:CopyObject
-              Resource:
-                - !GetAtt BackupBucket.Arn
-                - !Sub "${BackupBucket.Arn}/*"
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
+  # RestoreHandlerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.RestoreHandler::handleRequest
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref AWS::Region
+  #         BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+  #         BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
+  #         COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+  #     Policies:
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref CognitoBackupTable
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - s3:GetObject
+  #               - s3:ListBucket
+  #               - s3:CopyObject
+  #             Resource:
+  #               - !GetAtt BackupBucket.Arn
+  #               - !Sub "${BackupBucket.Arn}/*"
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt BackupAlertTopic.TopicName
 
   DisasterRecoveryTriggerFunction:
     Type: AWS::Serverless::Function
@@ -1084,11 +1081,11 @@ Outputs:
     Value: !Ref PhotosTable
     Export:
       Name: !Sub "${AppName}-${StageName}-photos-table-name"
-  CognitoBackupTableName:
-    Description: Name of the Cognito backup DynamoDB table in backup region
-    Value: !Ref CognitoBackupTable
-    Export:
-      Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
+  # CognitoBackupTableName:
+  #   Description: Name of the Cognito backup DynamoDB table in backup region
+  #   Value: !Ref CognitoBackupTable
+  #   Export:
+  #     Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
   BackupApiUrl:
     Description: URL of the backup API Gateway endpoint
     Value: !Sub "https://${PhotoBlogApiBackup}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
