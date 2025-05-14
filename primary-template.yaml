@@ -1158,7 +1158,9 @@ Resources:
               Action:
                 - 'cognito-idp:AdminCreateUser'
                 - 'cognito-idp:AdminSetUserPassword'
-              Resource: !GetAtt UserPool.Arn
+              Resource: 
+               - !GetAtt UserPool.Arn
+               - !GetAtt BackupUserPool.Arn
             - Effect: Allow
               Action:
                 - 'ses:SendEmail'
