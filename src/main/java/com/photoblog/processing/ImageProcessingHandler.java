@@ -76,6 +76,8 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
             File processedFile = processImage(unprocessedFile, WATERMARK_TEXT, context);
+            uploadProcessedFile(sourceKey, processedFile, context);
+
 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
@@ -134,7 +136,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private File downloadFileFromS3(String sourceKey, Context context) throws Exception {
         verifyFileExistsInS3(sourceKey, context);
         ResponseBytes<GetObjectResponse> objectBytes = getS3Object(sourceKey, context);
-        return saveBytesToFile(objectBytes.asByteArray(), TMP_DIR, context);
+        return saveBytesToFile(objectBytes.asByteArray(), TMP_DIR + "/unprocessedFile.jpg", context);
     }
 
     private void verifyFileExistsInS3(String sourceKey, Context context) {
