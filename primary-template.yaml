@@ -166,26 +166,24 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      Replicas:
-        - Region: !Ref PrimaryRegion
-        - Region: !Ref BackupRegion
+        RecoveryPeriodInDays: 1
 
-  CognitoBackupTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "${AppName}-${StageName}-cognito-backup-test-table"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Replicas:
-        - Region: !Ref PrimaryRegion
-        - Region: !Ref BackupRegion
+  # CognitoBackupTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     TableName: !Sub "${AppName}-${StageName}-cognito-backup-test-table"
+  #     BillingMode: PAY_PER_REQUEST
+  #     AttributeDefinitions:
+  #       - AttributeName: id
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: id
+  #         KeyType: HASH
+  #     StreamSpecification:
+  #       StreamViewType: NEW_AND_OLD_IMAGES
+  #     Replicas:
+  #       - Region: !Ref PrimaryRegion
+  #       - Region: !Ref BackupRegion
 
   SystemAlertTopic:
     Type: AWS::SNS::Topic
@@ -1223,106 +1221,106 @@ Resources:
             Name: DailyBackupSchedule
             Description: Daily backup of application data
 
-  RestoreHandlerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.RestoreHandler::handleRequest
-      Runtime: java21
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
-          BACKUP_BUCKET_ARN: !Ref BackupBucketArn
-          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref BackupRegion
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CognitoBackupTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-                - s3:CopyObject
-              Resource:
-                - !Ref BackupBucketArn
-                - !Sub "${BackupBucketArn}/*"
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt SystemAlertTopic.TopicName
+  # RestoreHandlerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.RestoreHandler::handleRequest
+  #     Runtime: java21
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+  #         BACKUP_BUCKET_ARN: !Ref BackupBucketArn
+  #         COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref BackupRegion
+  #     Policies:
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref CognitoBackupTable
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - s3:GetObject
+  #               - s3:ListBucket
+  #               - s3:CopyObject
+  #             Resource:
+  #               - !Ref BackupBucketArn
+  #               - !Sub "${BackupBucketArn}/*"
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt SystemAlertTopic.TopicName
 
-  CognitoBackupFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
-      Runtime: java21
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          PRIMARY_USER_POOL_ID: !Ref UserPool
-          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-          BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref BackupRegion
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CognitoBackupTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - cognito-idp:ListUsers
-                - cognito-idp:AdminCreateUser
-                - cognito-idp:AdminSetUserPassword
-              Resource:
-                - !GetAtt UserPool.Arn
-                - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS::AccountId}:userpool/${BackupUserPoolId}"
-      Events:
-        ScheduledEvent:
-          Type: Schedule
-          Properties:
-            Schedule: rate(6 hours)
-            Name: CognitoSyncSchedule
-            Description: Sync Cognito users between primary and backup pools every 6 hours
+  # CognitoBackupFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.CognitoBackupHandler::handleRequest
+  #     Runtime: java21
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         PRIMARY_USER_POOL_ID: !Ref UserPool
+  #         COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+  #         BACKUP_USER_POOL_ID: !Ref BackupUserPoolId
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref BackupRegion
+  #     Policies:
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref CognitoBackupTable
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - cognito-idp:ListUsers
+  #               - cognito-idp:AdminCreateUser
+  #               - cognito-idp:AdminSetUserPassword
+  #             Resource:
+  #               - !GetAtt UserPool.Arn
+  #               - !Sub "arn:aws:cognito-idp:${BackupRegion}:${AWS::AccountId}:userpool/${BackupUserPoolId}"
+  #     Events:
+  #       ScheduledEvent:
+  #         Type: Schedule
+  #         Properties:
+  #           Schedule: rate(6 hours)
+  #           Name: CognitoSyncSchedule
+  #           Description: Sync Cognito users between primary and backup pools every 6 hours
 
-  DisasterRecoveryTriggerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
-      Runtime: java21
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
-          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref BackupRegion
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt SystemAlertTopic.TopicName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource: !GetAtt RestoreHandlerFunction.Arn
-      Events:
-        AlarmTrigger:
-          Type: SNS
-          Properties:
-            Topic: !Ref SystemAlertTopic
-        ApiGatewayTrigger:
-          Type: SNS
-          Properties:
-            Topic: !Ref SystemAlertTopic
-        Route53Trigger:
-          Type: SNS
-          Properties:
-            Topic: !Ref SystemAlertTopic
+  # DisasterRecoveryTriggerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
+  #     Runtime: java21
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
+  #         SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopic
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref BackupRegion
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt SystemAlertTopic.TopicName
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - lambda:InvokeFunction
+  #             Resource: !GetAtt RestoreHandlerFunction.Arn
+  #     Events:
+  #       AlarmTrigger:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref SystemAlertTopic
+  #       ApiGatewayTrigger:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref SystemAlertTopic
+  #       Route53Trigger:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref SystemAlertTopic
 
 #  Route53FailoverConfig:
 #    Type: AWS::Route53::RecordSetGroup
@@ -1347,21 +1345,21 @@ Resources:
 #          SetIdentifier: "backup"
 #          Failover: SECONDARY
 
-  PrimaryRegionHealthAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub "${AppName}-${StageName}-primary-region-health"
-      AlarmDescription: "Alarm when the primary region services are unhealthy"
-      MetricName: "StatusCheckFailed"
-      Namespace: "AWS/EC2"
-      Statistic: "Maximum"
-      Period: 60
-      EvaluationPeriods: 2
-      Threshold: 1
-      ComparisonOperator: "GreaterThanOrEqualToThreshold"
-      AlarmActions:
-        - !Ref SystemAlertTopic
-        - !GetAtt DisasterRecoveryTriggerFunction.Arn
+  # PrimaryRegionHealthAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmName: !Sub "${AppName}-${StageName}-primary-region-health"
+  #     AlarmDescription: "Alarm when the primary region services are unhealthy"
+  #     MetricName: "StatusCheckFailed"
+  #     Namespace: "AWS/EC2"
+  #     Statistic: "Maximum"
+  #     Period: 60
+  #     EvaluationPeriods: 2
+  #     Threshold: 1
+  #     ComparisonOperator: "GreaterThanOrEqualToThreshold"
+  #     AlarmActions:
+  #       - !Ref SystemAlertTopic
+  #       - !GetAtt DisasterRecoveryTriggerFunction.Arn
 
   ApiGatewayAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1446,11 +1444,11 @@ Outputs:
     Value: !Ref PhotosTable
     Export:
       Name: !Sub "${AppName}-${StageName}-photos-table-name"
-  CognitoBackupTableName:
-    Description: Name of the Cognito backup DynamoDB table
-    Value: !Ref CognitoBackupTable
-    Export:
-      Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
+  # CognitoBackupTableName:
+  #   Description: Name of the Cognito backup DynamoDB table
+  #   Value: !Ref CognitoBackupTable
+  #   Export:
+  #     Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
   SystemAlertTopicArn:
     Description: ARN of the system alert SNS topic
     Value: !Ref SystemAlertTopic
