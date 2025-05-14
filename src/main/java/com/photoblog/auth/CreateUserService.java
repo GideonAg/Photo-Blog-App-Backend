@@ -73,7 +73,7 @@ public class CreateUserService {
         backupCognitoClient.adminCreateUser(createBackedUpUserRequest);
 
         var backupSetPasswordRequest = AdminSetUserPasswordRequest.builder()
-                .userPoolId(userPoolId)
+                .userPoolId(backupUserPoolId)
                 .username(email)
                 .password(password)
                 .permanent(true)
