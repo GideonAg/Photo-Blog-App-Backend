@@ -164,9 +164,9 @@ Resources:
       PreventUserExistenceErrors: ENABLED
 
   PhotosTable:
-    Type: AWS::DynamoDB::GlobalTable
+    Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos"
+      TableName: !Sub "${AppName}-${StageName}-photos-test-table"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: photoId
@@ -198,22 +198,19 @@ Resources:
         - Region: !Ref PrimaryRegion
         - Region: !Ref BackupRegion
 
-#  CognitoBackupTable:
-#    Type: AWS::DynamoDB::GlobalTable
-#    Properties:
-#      TableName: !Sub "${AppName}-${StageName}-cognito-backup"
-#      BillingMode: PAY_PER_REQUEST
-#      AttributeDefinitions:
-#        - AttributeName: id
-#          AttributeType: S
-#      KeySchema:
-#        - AttributeName: id
-#          KeyType: HASH
-#      StreamSpecification:
-#        StreamViewType: NEW_AND_OLD_IMAGES
-#      Replicas:
-#        - Region: !Ref PrimaryRegion
-#        - Region: !Ref BackupRegion
+  CognitoBackupTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}-${StageName}-cognito-backup-test-table"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
 
   ImageProcessingQueue:
     Type: AWS::SQS::Queue
