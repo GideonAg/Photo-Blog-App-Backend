@@ -164,9 +164,9 @@ Resources:
       PreventUserExistenceErrors: ENABLED
 
   PhotosTable:
-    Type: AWS::DynamoDB::GlobalTable
+    Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos"
+      TableName: !Sub "${AppName}-${StageName}-photos-test-table"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: photoId
@@ -192,8 +192,6 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
       Replicas:
         - Region: !Ref PrimaryRegion
         - Region: !Ref BackupRegion
@@ -201,7 +199,7 @@ Resources:
   CognitoBackupTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-cognito-backup-test"
+      TableName: !Sub "${AppName}-${StageName}-cognito-backup-test-table"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: id

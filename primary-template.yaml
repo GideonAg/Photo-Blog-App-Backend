@@ -136,9 +136,9 @@ Resources:
               StorageClass: STANDARD
 
   PhotosTable:
-    Type: AWS::DynamoDB::Table
+    Type: AWS::DynamoDB::GlobalTable
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos-test-table"
+      TableName: !Sub "${AppName}-${StageName}-photos"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: photoId
@@ -164,6 +164,8 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       Replicas:
         - Region: !Ref PrimaryRegion
         - Region: !Ref BackupRegion
