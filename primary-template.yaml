@@ -164,9 +164,6 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-        RecoveryPeriodInDays: 1
 
   # CognitoBackupTable:
   #   Type: AWS::DynamoDB::Table
