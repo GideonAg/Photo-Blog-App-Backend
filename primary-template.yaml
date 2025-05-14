@@ -259,450 +259,449 @@ Resources:
       StageName: !Ref StageName
       Cors:
         AllowMethods: "'*'"
-        AllowHeaders: "'*'"
-        # AllowOrigin: !Sub "https://${DomainName}"
-        AllowOrigin: "'http://localhost:5173'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+        AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
-      DefinitionBody:
-        swagger: "2.0"
-        info:
-          title: !Sub "${AppName}-${StageName}-api"
-        paths:
-          /photos:
-            post:
-              consumes:
-                - multipart/form-data
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo uploaded successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoUploadFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            get:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photos retrieved successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /photos/{photoId}:
-            get:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo retrieved successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-            delete:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo deleted successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoDeleteFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-          /photos/{photoId}/share:
-            post:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo shared successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoShareFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /recycle-bin:
-            get:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Deleted photos retrieved successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinQueryFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /recycle-bin/{photoId}/restore:
-            post:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo restored successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinRestoreFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /recycle-bin/{photoId}:
-            delete:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Photo permanently deleted successfully"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinDeleteFunction.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - CognitoAuthorizer: []
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /health:
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-            get:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "Health check"
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseTemplates:
-                      application/json: '{"status": "healthy"}'
-          /auth/login:
-            post:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "User authenticated successfully"
-                "401":
-                  description: "Authentication failed"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationHandler.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - NONE: [ ]
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
-          /auth/signup:
-            post:
-              produces:
-                - application/json
-              responses:
-                "200":
-                  description: "User created successfully"
-                "400":
-                  description: "Invalid request"
-                "500":
-                  description: "Server error"
-              x-amazon-apigateway-integration:
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
-                httpMethod: POST
-                type: aws_proxy
-              security:
-                - NONE: [ ]
-            options:
-              produces:
-                - application/json
-              consumes:
-                - application/json
-              responses:
-                "200":
-                  description: "CORS preflight response"
-                  headers:
-                    Access-Control-Allow-Origin:
-                      type: string
-                    Access-Control-Allow-Methods:
-                      type: string
-                    Access-Control-Allow-Headers:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: MOCK
-                requestTemplates:
-                  application/json: '{"statusCode": 200}'
-                responses:
-                  default:
-                    statusCode: "200"
-                    responseParameters:
-                      # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
-                      method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
-                      method.response.header.Access-Control-Allow-Methods: "'*'"
-                      method.response.header.Access-Control-Allow-Headers: "'*'"
-                    responseTemplates:
-                      application/json: '{}'
+      # DefinitionBody:
+      #   swagger: "2.0"
+      #   info:
+      #     title: !Sub "${AppName}-${StageName}-api"
+      #   paths:
+      #     /photos:
+      #       post:
+      #         consumes:
+      #           - multipart/form-data
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo uploaded successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoUploadFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       get:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photos retrieved successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /photos/{photoId}:
+      #       get:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo retrieved successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoQueryFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #       delete:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo deleted successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoDeleteFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #     /photos/{photoId}/share:
+      #       post:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo shared successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PhotoShareFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /recycle-bin:
+      #       get:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Deleted photos retrieved successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinQueryFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /recycle-bin/{photoId}/restore:
+      #       post:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo restored successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinRestoreFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /recycle-bin/{photoId}:
+      #       delete:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Photo permanently deleted successfully"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecycleBinDeleteFunction.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - CognitoAuthorizer: []
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /health:
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #       get:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "Health check"
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseTemplates:
+      #                 application/json: '{"status": "healthy"}'
+      #     /auth/login:
+      #       post:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "User authenticated successfully"
+      #           "401":
+      #             description: "Authentication failed"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticationHandler.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - NONE: [ ]
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
+      #     /auth/signup:
+      #       post:
+      #         produces:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "User created successfully"
+      #           "400":
+      #             description: "Invalid request"
+      #           "500":
+      #             description: "Server error"
+      #         x-amazon-apigateway-integration:
+      #           uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateUserHandler.Arn}/invocations"
+      #           httpMethod: POST
+      #           type: aws_proxy
+      #         security:
+      #           - NONE: [ ]
+      #       options:
+      #         produces:
+      #           - application/json
+      #         consumes:
+      #           - application/json
+      #         responses:
+      #           "200":
+      #             description: "CORS preflight response"
+      #             headers:
+      #               Access-Control-Allow-Origin:
+      #                 type: string
+      #               Access-Control-Allow-Methods:
+      #                 type: string
+      #               Access-Control-Allow-Headers:
+      #                 type: string
+      #         x-amazon-apigateway-integration:
+      #           type: MOCK
+      #           requestTemplates:
+      #             application/json: '{"statusCode": 200}'
+      #           responses:
+      #             default:
+      #               statusCode: "200"
+      #               responseParameters:
+      #                 # method.response.header.Access-Control-Allow-Origin: !Sub "'https://${DomainName}'"
+      #                 method.response.header.Access-Control-Allow-Origin: "'http://localhost:5173'"
+      #                 method.response.header.Access-Control-Allow-Methods: "'*'"
+      #                 method.response.header.Access-Control-Allow-Headers: "'*'"
+      #               responseTemplates:
+      #                 application/json: '{}'
 
   PhotoUploadFunction:
     Type: AWS::Serverless::Function
