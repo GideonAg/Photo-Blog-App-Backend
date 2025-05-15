@@ -47,6 +47,10 @@ Parameters:
     Type: String
     Default: notifications@mscv2group1.link
     Description: Email address to send notifications from
+  AdminEmail:
+    Type: String
+    Default: gideon.agbosu@amalitech.com
+    Description: Email address of Photo Blog App admin
   HostedZoneId:
     Type: String
     Default: "Z07073352UBORQGYJNAVV"
@@ -59,6 +63,11 @@ Parameters:
     Type: String
     Description: ID of the primary Cognito user pool client
     Default: ""
+  SystemAlertTopicArn:
+    Type: String
+    Description: ARN of the system alert SNS topic in the primary region
+    Default: !ImportValue
+      Fn::Sub: "${AppName}-${StageName}-system-alert-topic-arn"
 
 Resources:
   BackupBucket:
@@ -1005,7 +1014,7 @@ Resources:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopicArn
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt BackupAlertTopic.TopicName
@@ -1013,7 +1022,12 @@ Resources:
             - Effect: Allow
               Action:
                 - cloudwatch:DescribeAlarms
+                - cloudwatch:GetMetricData
               Resource: "*"
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref SystemAlertTopicArn
       Events:
         ScheduledEvent:
           Type: Schedule
