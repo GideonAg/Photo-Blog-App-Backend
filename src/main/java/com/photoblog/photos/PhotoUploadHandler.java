@@ -62,11 +62,13 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             //multipart form-data
             String contentType = request.getHeaders().get("Content-Type");
+            context.getLogger().log(contentType + "Content-Type header");
             if(contentType == null || !contentType.startsWith("multipart/form-data")){
                 return buildErrorResponse(response, 400, "Request must be multipart/form-data");
             }
 
             MultipartFormData formData = MultipartFormData.parseMultipartRequest(request.getBody(), contentType, context);
+            context.getLogger().log(formData + " :Form Data");
             if (formData == null) {
                 return buildErrorResponse(response, 400, "Failed to parse multipart form data");
             }
@@ -80,7 +82,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             }
 
 
-            if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            if (!ALLOWED_CONTENT_TYPES.contains(fileContentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
 
