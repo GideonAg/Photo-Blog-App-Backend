@@ -4,12 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.*;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -60,7 +62,6 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 400, "Request body is empty");
             }
 
-
             Map<String, Object> requestBody = objectMapper.readValue(
                     request.getBody(),
                     new TypeReference<>() {
@@ -75,27 +76,25 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
             if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty()) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
-            String fileName = userEmail.replace("@", "") + "." + contentType.split("/")[1];
+            String fileNameWithExtension = firstName + System.currentTimeMillis()+ "." + contentType.split("/")[1];
             if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
 
-            if (fileBytes.length > MAX_IMAGE_SIZE_BYTES) {
+            byte[] imagesBytes = Base64.getDecoder().decode(base64Image);
+            if (imagesBytes.length > MAX_IMAGE_SIZE_BYTES) {
                 return buildErrorResponse(response, 400, "Image size exceeds maximum allowed size of 6MB");
             }
 
-
-            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(imageName, fileBytes, contentType);
+            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileNameWithExtension, imagesBytes, contentType);
             try {
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileNameWithExtension, userId, userEmail, firstName, lastName, LocalDateTime.now());
 
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userId, userEmail, firstName, lastName, LocalDateTime.now());
-
-
-                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + imageName;
+                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileNameWithExtension;
                 Map<String, String> responseBody = new HashMap<>();
                 responseBody.put("status", "success");
                 responseBody.put("message", "Image uploaded successfully");
-                responseBody.put("imageName", imageName);
+                responseBody.put("fileName", fileNameWithExtension);
                 responseBody.put("url", objectUrl);
                 responseBody.put("etag", putObjectResponse.eTag());
                 responseBody.put("sqsMessageId", sqsResponse.messageId());
@@ -106,6 +105,9 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 500, e.getMessage());
             }
             return response;
+        } catch (IllegalArgumentException e) {
+            context.getLogger().log(e.getMessage());
+            return buildErrorResponse(response, 400, "Invalid base64 encoding");
         } catch (Exception e) {
             context.getLogger().log(e.getMessage());
             return buildErrorResponse(response, 500, "Error processing request");
