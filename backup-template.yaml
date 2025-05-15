@@ -47,6 +47,10 @@ Parameters:
     Type: String
     Default: notifications@mscv2group1.link
     Description: Email address to send notifications from
+  AdminEmail:
+    Type: String
+    Default: gideon.agbosu@amalitech.com
+    Description: Email address of Photo Blog App admin
   HostedZoneId:
     Type: String
     Default: "Z07073352UBORQGYJNAVV"
@@ -59,6 +63,10 @@ Parameters:
     Type: String
     Description: ID of the primary Cognito user pool client
     Default: ""
+  SystemAlertTopicArn:
+    Type: String
+    Description: ARN of the system alert SNS topic in the primary region
+    Default: "arn:aws:sns:eu-west-1:711387109786:photo-blog-group1-dev-system-alerts"
 
 Resources:
   BackupBucket:
@@ -126,6 +134,7 @@ Resources:
               - s3:GetObjectVersionTagging
               - s3:GetReplicationConfiguration
               - s3:ListBucket
+              - s3:PutObject
             Resource:
               - !GetAtt BackupBucket.Arn
               - !Sub "${BackupBucket.Arn}/*"
@@ -166,7 +175,7 @@ Resources:
   PhotosTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-photos"
+      TableName: !Sub "${AppName}-${StageName}-photos-test-table"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: photoId
@@ -192,11 +201,13 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   CognitoBackupTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AppName}-${StageName}-cognito-backup"
+      TableName: !Sub "${AppName}-${StageName}-cognito-backup-test-table"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: id
@@ -239,7 +250,8 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
-        AllowOrigin: !Sub "https://${DomainName}"
+        AllowOrigin: !Sub "'*'"
+#        AllowOrigin: !Sub "https://${DomainName}"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
@@ -906,61 +918,61 @@ Resources:
             Path: /auth/signup
             Method: post
 
-  RestoreHandlerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.RestoreHandler::handleRequest
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
-          BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
-          COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CognitoBackupTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-                - s3:CopyObject
-              Resource:
-                - !GetAtt BackupBucket.Arn
-                - !Sub "${BackupBucket.Arn}/*"
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
+  # RestoreHandlerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.RestoreHandler::handleRequest
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref AWS::Region
+  #         BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+  #         BACKUP_BUCKET_ARN: !GetAtt BackupBucket.Arn
+  #         COGNITO_BACKUP_TABLE: !Ref CognitoBackupTable
+  #     Policies:
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref CognitoBackupTable
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - s3:GetObject
+  #               - s3:ListBucket
+  #               - s3:CopyObject
+  #             Resource:
+  #               - !GetAtt BackupBucket.Arn
+  #               - !Sub "${BackupBucket.Arn}/*"
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt BackupAlertTopic.TopicName
 
-  DisasterRecoveryTriggerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./
-      Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
-      Timeout: 300
-      MemorySize: 1024
-      Environment:
-        Variables:
-          RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
-          PRIMARY_REGION: !Ref PrimaryRegion
-          BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt BackupAlertTopic.TopicName
-        - Statement:
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource: !GetAtt RestoreHandlerFunction.Arn
-      Events:
-        AlarmTrigger:
-          Type: SNS
-          Properties:
-            Topic: !Ref BackupAlertTopic
+  # DisasterRecoveryTriggerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./
+  #     Handler: com.photoblog.disaster.DisasterRecoveryTriggerHandler::handleRequest
+  #     Timeout: 300
+  #     MemorySize: 1024
+  #     Environment:
+  #       Variables:
+  #         RESTORE_FUNCTION_ARN: !GetAtt RestoreHandlerFunction.Arn
+  #         PRIMARY_REGION: !Ref PrimaryRegion
+  #         BACKUP_REGION: !Ref AWS::Region
+  #         BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt BackupAlertTopic.TopicName
+  #       - Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - lambda:InvokeFunction
+  #             Resource: !GetAtt RestoreHandlerFunction.Arn
+  #     Events:
+  #       AlarmTrigger:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref BackupAlertTopic
 
   Route53FailoverHandler:
     Type: AWS::Serverless::Function
@@ -1001,7 +1013,7 @@ Resources:
         Variables:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
-          BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
+          SYSTEM_ALERT_TOPIC: !Ref SystemAlertTopicArn
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt BackupAlertTopic.TopicName
@@ -1009,7 +1021,12 @@ Resources:
             - Effect: Allow
               Action:
                 - cloudwatch:DescribeAlarms
+                - cloudwatch:GetMetricData
               Resource: "*"
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref SystemAlertTopicArn
       Events:
         ScheduledEvent:
           Type: Schedule
@@ -1078,11 +1095,11 @@ Outputs:
     Value: !Ref PhotosTable
     Export:
       Name: !Sub "${AppName}-${StageName}-photos-table-name"
-  CognitoBackupTableName:
-    Description: Name of the Cognito backup DynamoDB table in backup region
-    Value: !Ref CognitoBackupTable
-    Export:
-      Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
+  # CognitoBackupTableName:
+  #   Description: Name of the Cognito backup DynamoDB table in backup region
+  #   Value: !Ref CognitoBackupTable
+  #   Export:
+  #     Name: !Sub "${AppName}-${StageName}-cognito-backup-table-name"
   BackupApiUrl:
     Description: URL of the backup API Gateway endpoint
     Value: !Sub "https://${PhotoBlogApiBackup}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"

@@ -67,15 +67,16 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                     new TypeReference<>() {
                     }
             );
-            context.getLogger().log("requestBody: " + requestBody);
 
             String base64Image = (String) requestBody.get("image");
             String contentType = (String) requestBody.get("contentType");
-            String fileName = userEmail + System.currentTimeMillis();
 
-            if (base64Image == null || base64Image.isEmpty() || contentType == null) {
+
+
+            if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty()) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
+            String fileNameWithExtension = firstName + System.currentTimeMillis()+ "." + contentType.split("/")[1];
             if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
@@ -85,16 +86,15 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 400, "Image size exceeds maximum allowed size of 6MB");
             }
 
-            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileName, imagesBytes, contentType);
+            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileNameWithExtension, imagesBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userId, userEmail, firstName, lastName, LocalDateTime.now());
-                context.getLogger().log("SQS message sent with ID: " + sqsResponse.messageId());
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileNameWithExtension, userId, userEmail, firstName, lastName, LocalDateTime.now());
 
-                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
+                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileNameWithExtension;
                 Map<String, String> responseBody = new HashMap<>();
                 responseBody.put("status", "success");
                 responseBody.put("message", "Image uploaded successfully");
-                responseBody.put("fileName", fileName);
+                responseBody.put("fileName", fileNameWithExtension);
                 responseBody.put("url", objectUrl);
                 responseBody.put("etag", putObjectResponse.eTag());
                 responseBody.put("sqsMessageId", sqsResponse.messageId());
