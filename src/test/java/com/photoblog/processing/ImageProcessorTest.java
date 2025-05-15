@@ -133,9 +133,9 @@ public class ImageProcessorTest {
         // Test that the builder defaults work as expected
         ImageProcessor.WatermarkSettings settings = ImageProcessor.WatermarkSettings.builder().build();
 
-        assertEquals(Color.YELLOW, settings.getColor());
-        assertEquals(0.2f, settings.getOpacity());
-        assertEquals(200, settings.getWidth());
+        assertEquals(Color.BLACK, settings.getColor());
+        assertEquals(0.5f, settings.getOpacity());
+        assertEquals(400, settings.getWidth());
         assertEquals(100, settings.getHeight());
         assertNotNull(settings.getFont());
     }
