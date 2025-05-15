@@ -46,7 +46,7 @@ public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestE
             context.getLogger().log("Retrieved " + photos.size() + " active photos for user: " + userId);
 
             List<String> photoUrls = photos.stream()
-                    .map(photo -> s3Util.getImage(userId, photo.getPhotoId()))
+                    .map(photo -> s3Util.getImage(photo.getImageName(), photo.getPhotoId()))
                     .toList();
 
             context.getLogger().log("Generated presigned URLs for " + photoUrls.size() + " photos");
