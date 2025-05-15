@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import com.photoblog.models.Photo;
 import com.photoblog.utils.AuthorizerClaims;
 import com.photoblog.utils.DynamoDBUtil;
+import com.photoblog.utils.HeadersUtil;
 import com.photoblog.utils.S3Util;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -19,10 +20,13 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@RequiredArgsConstructor
 public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final S3Util s3Util;
     private final Gson gson = new Gson();
+
+    public PhotoDeleteHandler() {
+        this.s3Util = new S3Util();
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
@@ -36,14 +40,17 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
                 context.getLogger().log("Validation failed: Missing user ID");
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(401)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Unauthorized: Missing user ID")));
             }
+            context.getLogger().log("Authenticated User "+ userId);
 
             // Extract photoId from path parameters
             String photoId = input.getPathParameters() != null ? input.getPathParameters().get("photoId") : null;
             if (photoId == null || photoId.isEmpty()) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(400)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Photo ID is required")));
             }
 
@@ -53,6 +60,7 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
                 context.getLogger().log("User ID mismatch: pathUserId=" + pathUserId + ", claimsUserId=" + userId);
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(403)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Forbidden: User ID mismatch")));
             }
             String s3Key = userId + "/" + photoId;
@@ -62,6 +70,7 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
             if (photo == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(404)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Photo not found")));
             }
 
@@ -93,11 +102,13 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
 
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody("Image marked as deleted");
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(500)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody("Error deleting image: " + e.getMessage());
         }
     }

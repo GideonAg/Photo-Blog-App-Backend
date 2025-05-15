@@ -21,7 +21,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 import static org.mockito.Mockito.lenient;
-
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -73,6 +72,7 @@ public class PhotoUploadHandlerTest {
         uploadUtilField.set(handler, uploadUtil);
 
         Field queueUtilField = PhotoUploadHandler.class.getDeclaredField("queueUtil");
+
         queueUtilField.setAccessible(true);
         queueUtilField.set(handler, queueUtil);
 
