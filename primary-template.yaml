@@ -210,6 +210,9 @@ Resources:
     Properties:
       QueueName: !Sub "${AppName}-${StageName}-image-processing"
       VisibilityTimeout: 300
+      RedrivePolicy:
+          deadLetterTargetArn: !GetAtt ProcessingRetryQueue.Arn
+          maxReceiveCount: 1
 
   ProcessingRetryQueue:
     Type: AWS::SQS::Queue
@@ -983,6 +986,11 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt ImageProcessingQueue.Arn
+            BatchSize: 1
+        RetrySQS:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ProcessingRetryQueue.QueueName
             BatchSize: 1
 
   ProcessingRetryFunction:
