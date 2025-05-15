@@ -74,7 +74,11 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
             File processedFile = processImage(unprocessedFile, WATERMARK_TEXT, context);
+<<<<<<< HEAD
             ImageMetadataDTO imageMetadata = uploadProcessedFile(sourceKey, processedFile, context);
+=======
+            uploadProcessedFile(sourceKey, processedFile, context);
+>>>>>>> 12c8270dba86fa9b374f4dab630d3a0baa09d858
 
 
             context.getLogger().log("Image processing completed for: " + sourceKey);
