@@ -11,7 +11,7 @@ public class SystemAlertHandler implements RequestHandler<SNSEvent, Void> {
 
     private final SESUtil sesUtil = new SESUtil();
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final String adminEmail = System.getenv("EMAIL_SENDER");
+    private final String adminEmail = System.getenv("ADMIN_EMAIL");
 
     @Override
     public Void handleRequest(SNSEvent event, Context context) {
