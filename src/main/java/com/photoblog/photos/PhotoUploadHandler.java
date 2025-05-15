@@ -4,14 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.*;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
-
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -62,39 +60,44 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 400, "Request body is empty");
             }
 
-            Map<String, Object> requestBody = objectMapper.readValue(
-                    request.getBody(),
-                    new TypeReference<>() {
-                    }
-            );
-
-            String base64Image = (String) requestBody.get("image");
-            String contentType = (String) requestBody.get("contentType");
-            String fileName = (String) requestBody.get("fileName");
-
-
-            if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty() || fileName == null || fileName.isEmpty()) {
-                return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
+            //multipart form-data
+            String contentType = request.getHeaders().get("Content-Type");
+            if(contentType == null || !contentType.startsWith("multipart/form-data")){
+                return buildErrorResponse(response, 400, "Request must be multipart/form-data");
             }
-            String fileNameWithExtension = fileName + "." + contentType.split("/")[1];
+
+            MultipartFormData formData = MultipartFormData.parseMultipartRequest(request.getBody(), contentType, context);
+            if (formData == null) {
+                return buildErrorResponse(response, 400, "Failed to parse multipart form data");
+            }
+
+            String imageName = formData.getFileName();
+            String fileContentType = formData.getContentType();
+            byte[] fileBytes = formData.getFileContent();
+
+            if (imageName == null || fileContentType == null || fileBytes == null) {
+                return buildErrorResponse(response, 400, "Missing required multipart fields: file, fileName, or contentType");
+            }
+
+
             if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
 
-            byte[] imagesBytes = Base64.getDecoder().decode(base64Image);
-            if (imagesBytes.length > MAX_IMAGE_SIZE_BYTES) {
+            if (fileBytes.length > MAX_IMAGE_SIZE_BYTES) {
                 return buildErrorResponse(response, 400, "Image size exceeds maximum allowed size of 6MB");
             }
 
-            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(fileNameWithExtension, imagesBytes, contentType);
-            try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileNameWithExtension, userId, userEmail, firstName, lastName, LocalDateTime.now());
 
-                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + fileNameWithExtension;
+            PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(imageName, fileBytes, contentType);
+            try {
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(imageName, userId, userEmail, firstName, lastName, LocalDateTime.now());
+
+                String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + imageName;
                 Map<String, String> responseBody = new HashMap<>();
                 responseBody.put("status", "success");
                 responseBody.put("message", "Image uploaded successfully");
-                responseBody.put("fileName", fileNameWithExtension);
+                responseBody.put("imageName", imageName);
                 responseBody.put("url", objectUrl);
                 responseBody.put("etag", putObjectResponse.eTag());
                 responseBody.put("sqsMessageId", sqsResponse.messageId());
@@ -105,9 +108,6 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 500, e.getMessage());
             }
             return response;
-        } catch (IllegalArgumentException e) {
-            context.getLogger().log(e.getMessage());
-            return buildErrorResponse(response, 400, "Invalid base64 encoding");
         } catch (Exception e) {
             context.getLogger().log(e.getMessage());
             return buildErrorResponse(response, 500, "Error processing request");
