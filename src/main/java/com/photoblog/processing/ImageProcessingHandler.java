@@ -3,10 +3,11 @@ package com.photoblog.processing;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.photoblog.dto.ImageMetadataDTO;
 import com.photoblog.dto.ImageProcessingRequest;
 import com.photoblog.models.Photo;
+import com.photoblog.utils.DynamoDBUtil;
 import com.photoblog.utils.SESUtil;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -18,11 +19,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -34,10 +34,13 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private static final String TMP_DIR = "/tmp";
     private final String STAGING_BUCKET = System.getenv("STAGING_BUCKET");
     private final String MAIN_BUCKET = System.getenv("MAIN_BUCKET");
-    private final String DESTINATION_PREFIX = "images/";
+    private final String UPLOADED_TIME = Instant.now().toString();
     private final S3Client s3Client = createS3Client();
     private String WATERMARK_TEXT = null;
-    private SESUtil sesUtil = getSesUtil();
+    private final SESUtil sesUtil = getSesUtil();
+    private final DynamoDBUtil databaseUtil = getDatabaseUtil();
+
+
 
     @Override
     public String handleRequest(SQSEvent event, Context context) {
@@ -76,13 +79,18 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
             File processedFile = processImage(unprocessedFile, WATERMARK_TEXT, context);
-            uploadProcessedFile(sourceKey, processedFile, context);
+
+            ImageMetadataDTO imageMetadata = uploadProcessedFile(sourceKey, processedFile, context);
 
 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
 
-//            savePhotoToDynamoDB("userId", sourceKey, versionId);
+            Photo newPhoto = createPhotoObject("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
+
+            databaseUtil.savePhoto(newPhoto);
+
+            context.getLogger().log("Image metadata saved to DynamoDB for: " + sourceKey);
 
             context.getLogger().log("Deleting unprocessed file: " + sourceKey);
             deleteUnprocessedFile(sourceKey, context);
@@ -156,11 +164,6 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
 
-
-    private static void logWarning(Context context,String message){
-        context.getLogger().log(message);
-    }
-
     private File saveBytesToFile(byte[] data, String filePath, Context context) throws Exception {
         ensureDirectoryExists(TMP_DIR);
         try (FileOutputStream fos = new FileOutputStream(filePath)) {
@@ -177,15 +180,15 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private String uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
+    private ImageMetadataDTO uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
         String destinationKey = buildDestinationKey(sourceKey);
         byte[] fileBytes = readFileToBytes(processedFile);
         return uploadFileToS3(destinationKey, fileBytes, context);
     }
 
     private String buildDestinationKey(String sourceKey) {
-        String originalFilename = sourceKey.startsWith("images/") ? sourceKey.substring("images/".length()) : sourceKey;
-        return DESTINATION_PREFIX + originalFilename;
+        String originalFilename = sourceKey.startsWith("/images") ? sourceKey.substring("/images".length()) : sourceKey;
+        return UPLOADED_TIME + originalFilename;
     }
 
     private byte[] readFileToBytes(File file) throws Exception {
@@ -194,7 +197,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private String uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
+    private ImageMetadataDTO uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(MAIN_BUCKET)
                 .key(destinationKey)
@@ -207,16 +210,13 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 .build()).toString();
         context.getLogger().log("File uploaded: " + MAIN_BUCKET + "/" + destinationKey);
         context.getLogger().log("File uploaded with version ID: " + versionId);
-        return versionId;
+        ImageMetadataDTO metadata = ImageMetadataDTO.builder()
+                .objectUrl(fileUrl)
+                .versionId(versionId)
+                .build();
+        return metadata;
     }
 
-    private String failureMessage(String errorMessage) {
-        return "Failed to process file. " + errorMessage;
-    }
-
-    private void logError(Context context, String message) {
-        context.getLogger().log("Error: " + message);
-    }
 
     private SESUtil getSesUtil() {
         return new SESUtil();
@@ -235,10 +235,17 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         context.getLogger().log("Unprocessed file deleted: " + STAGING_BUCKET + "/" + sourceKey);
     }
 
-    private Photo savePhotoToDynamoDB(String userId, String imageUrl,  String versionId) {
+
+    private DynamoDBUtil getDatabaseUtil() {
+        return new DynamoDBUtil();
+    }
+
+    private Photo createPhotoObject(String userId,String imageName, String imageUrl,  String versionId) {
+
         Photo newImage = Photo.builder()
                 .userId(userId)
                 .imageUrl(imageUrl)
+                .imageName(imageName)
                 .status(Photo.Status.ACTIVE)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

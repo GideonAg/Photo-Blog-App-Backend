@@ -22,6 +22,12 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
         initializeResources();
     }
 
+    public AuthenticationHandler(AuthService authService) {
+        Core.getGlobalContext().register(this);
+        mapper = new ObjectMapper();
+        this.authService = authService;
+    }
+
     private void initializeResources() {
         authService = new AuthService();
 
