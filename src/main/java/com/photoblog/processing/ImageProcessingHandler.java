@@ -234,11 +234,13 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         context.getLogger().log("Unprocessed file deleted: " + STAGING_BUCKET + "/" + sourceKey);
     }
 
+
     private DynamoDBUtil getDatabaseUtil() {
         return new DynamoDBUtil();
     }
 
     private Photo createPhotoObject(String userId,String imageName, String imageUrl,  String versionId) {
+
         Photo newImage = Photo.builder()
                 .userId(userId)
                 .imageUrl(imageUrl)
