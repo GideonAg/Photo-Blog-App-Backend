@@ -245,6 +245,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         Photo newImage = Photo.builder()
                 .userId(userId)
                 .imageUrl(imageUrl)
+                .imageName(imageName)
                 .status(Photo.Status.ACTIVE)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
