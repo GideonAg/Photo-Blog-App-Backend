@@ -9,10 +9,10 @@ import java.util.Map;
 import static software.amazon.awssdk.services.cognitoidentityprovider.model.AuthFlowType.USER_PASSWORD_AUTH;
 
 public class AuthService {
-    private static final CognitoIdentityProviderClient cognitoClient = CognitoIdentityProviderClient.builder()
+    private final CognitoIdentityProviderClient cognitoClient = CognitoIdentityProviderClient.builder()
             .region(Region.of(System.getenv("PRIMARY_REGION")))
             .build();
-    private static final String CLIENT_ID = System.getenv("USER_POOL_CLIENT_ID");
+    private final String CLIENT_ID = System.getenv("USER_POOL_CLIENT_ID");
 
     public Map<String, String> login(String email, String password) {
 

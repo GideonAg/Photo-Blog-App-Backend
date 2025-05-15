@@ -15,11 +15,11 @@ import java.io.IOException;
 @Slf4j
 public class ImageProcessor {
     // Extract constants for better readability and maintainability
-    private static final int DEFAULT_WATERMARK_WIDTH = 200;
+    private static final int DEFAULT_WATERMARK_WIDTH = 400;
     private static final int DEFAULT_WATERMARK_HEIGHT = 100;
     private static final int DEFAULT_IMAGE_WIDTH = 800;
     private static final int DEFAULT_IMAGE_HEIGHT = 600;
-    private static final float DEFAULT_WATERMARK_OPACITY = 0.2f;
+    private static final float DEFAULT_WATERMARK_OPACITY = 0.5f;
     private static final double DEFAULT_OUTPUT_QUALITY = 0.9;
 
     /**
@@ -29,10 +29,10 @@ public class ImageProcessor {
     @Builder
     public static class WatermarkSettings {
         @Builder.Default
-        private Font font = new Font("Arial", Font.BOLD, 20);
+        private Font font = new Font("Arial", Font.BOLD, 15);
 
         @Builder.Default
-        private Color color = Color.YELLOW;
+        private Color color = Color.BLACK;
 
         @Builder.Default
         private float opacity = DEFAULT_WATERMARK_OPACITY;
