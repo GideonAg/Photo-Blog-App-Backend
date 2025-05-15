@@ -60,29 +60,23 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
                 return buildErrorResponse(response, 400, "Request body is empty");
             }
 
-            //multipart form-data
-            String contentType = request.getHeaders().get("Content-Type");
-            context.getLogger().log(contentType + "Content-Type header");
-            if(contentType == null || !contentType.startsWith("multipart/form-data")){
-                return buildErrorResponse(response, 400, "Request must be multipart/form-data");
+
+            Map<String, Object> requestBody = objectMapper.readValue(
+                    request.getBody(),
+                    new TypeReference<>() {
+                    }
+            );
+
+            String base64Image = (String) requestBody.get("image");
+            String contentType = (String) requestBody.get("contentType");
+
+
+
+            if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty()) {
+                return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
-
-            MultipartFormData formData = MultipartFormData.parseMultipartRequest(request.getBody(), contentType, context);
-            context.getLogger().log(formData + " :Form Data");
-            if (formData == null) {
-                return buildErrorResponse(response, 400, "Failed to parse multipart form data");
-            }
-
-            String imageName = formData.getFileName();
-            String fileContentType = formData.getContentType();
-            byte[] fileBytes = formData.getFileContent();
-
-            if (imageName == null || fileContentType == null || fileBytes == null) {
-                return buildErrorResponse(response, 400, "Missing required multipart fields: file, fileName, or contentType");
-            }
-
-
-            if (!ALLOWED_CONTENT_TYPES.contains(fileContentType.toLowerCase())) {
+            String fileName = userEmail.replace("@", "") + "." + contentType.split("/")[1];
+            if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }
 
@@ -93,7 +87,9 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             PutObjectResponse putObjectResponse = uploadUtil.uploadToS3(imageName, fileBytes, contentType);
             try {
-                SendMessageResponse sqsResponse = queueUtil.sendToQueue(imageName, userId, userEmail, firstName, lastName, LocalDateTime.now());
+
+                SendMessageResponse sqsResponse = queueUtil.sendToQueue(fileName, userId, userEmail, firstName, lastName, LocalDateTime.now());
+
 
                 String objectUrl = "https://" + bucketName + ".s3.amazonaws.com/" + imageName;
                 Map<String, String> responseBody = new HashMap<>();
