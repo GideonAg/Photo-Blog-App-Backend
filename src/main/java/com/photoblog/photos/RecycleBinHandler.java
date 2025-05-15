@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.photoblog.models.Photo;
 import com.photoblog.utils.AuthorizerClaims;
 import com.photoblog.utils.DynamoDBUtil;
+import com.photoblog.utils.HeadersUtil;
 import com.photoblog.utils.S3Util;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
@@ -22,16 +23,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RequiredArgsConstructor
 public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private final DynamoDBUtil dynamoDBUtil;
-    private final S3Util s3Util;
+    private  DynamoDBUtil dynamoDBUtil;
+    private  S3Util s3Util;
     private final Gson gson = new Gson();
+
+    public RecycleBinHandler() {
+        this.dynamoDBUtil = new DynamoDBUtil();
+        this.s3Util = new S3Util();
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(400)
+                .withHeaders(HeadersUtil.getHeaders())
                 .withBody(gson.toJson(Map.of("error", "Invalid operation")));
     }
 
@@ -40,6 +46,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             context.getLogger().log("Validation failed: Missing user ID");
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(401)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Unauthorized: Missing user ID")));
         }
         return null;
@@ -62,6 +69,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             if (deletedPhotos.isEmpty()) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(200)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(new ArrayList<>()));
             }
 
@@ -102,16 +110,19 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
 
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(response));
         } catch (IllegalArgumentException | IllegalStateException e) {
             context.getLogger().log("Authorization error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(401)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Authorization failed: " + e.getMessage())));
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(500)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Error listing deleted images: " + e.getMessage())));
         }
     }
@@ -133,6 +144,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             if (photoId == null || photoId.isEmpty()) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(400)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Photo ID is required")));
             }
 
@@ -141,6 +153,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             if (photo == null || photo.getStatus() != Photo.Status.DELETED) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(404)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Deleted photo not found")));
             }
 
@@ -154,16 +167,19 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
 
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("message", "Image restored")));
         } catch (IllegalArgumentException | IllegalStateException e) {
             context.getLogger().log("Authorization error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(401)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Authorization failed: " + e.getMessage())));
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(500)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Error restoring image: " + e.getMessage())));
         }
     }
@@ -185,6 +201,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             if (photoId == null || photoId.isEmpty()) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(400)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Photo ID is required")));
             }
 
@@ -193,6 +210,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             if (photo == null || photo.getStatus() != Photo.Status.DELETED) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(404)
+                        .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Deleted photo not found")));
             }
 
@@ -229,16 +247,19 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
 
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("message", "Image permanently deleted")));
         } catch (IllegalArgumentException | IllegalStateException e) {
             context.getLogger().log("Authorization error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(401)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Authorization failed: " + e.getMessage())));
         } catch (Exception e) {
             context.getLogger().log("Error: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(500)
+                    .withHeaders(HeadersUtil.getHeaders())
                     .withBody(gson.toJson(Map.of("error", "Error permanently deleting image: " + e.getMessage())));
         }
     }
