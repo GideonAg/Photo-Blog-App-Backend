@@ -60,6 +60,7 @@ class RegionMonitorHandlerTest {
         when(context.getLogger()).thenReturn(new MockLogger());
 
         new EnvironmentVariables()
+                .set("AWS_REGION", "eu-west-1")
                 .set("PRIMARY_REGION", PRIMARY_REGION)
                 .set("SYSTEM_ALERT_TOPIC", SYSTEM_ALERT_TOPIC)
                 .set("API_GATEWAY_ID", API_GATEWAY_ID)
