@@ -3,8 +3,8 @@ package com.photoblog.processing;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.photoblog.dto.ImageMetadataDTO;
 import com.photoblog.dto.ImageProcessingRequest;
 import com.photoblog.models.Photo;
 import com.photoblog.utils.SESUtil;
@@ -18,8 +18,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,13 +74,13 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             File unprocessedFile = downloadFileFromS3(sourceKey, context);
             File processedFile = processImage(unprocessedFile, WATERMARK_TEXT, context);
-            uploadProcessedFile(sourceKey, processedFile, context);
+            ImageMetadataDTO imageMetadata = uploadProcessedFile(sourceKey, processedFile, context);
 
 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
 
-//            savePhotoToDynamoDB("userId", sourceKey, versionId);
+            savePhotoToDynamoDB("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
 
             context.getLogger().log("Deleting unprocessed file: " + sourceKey);
             deleteUnprocessedFile(sourceKey, context);
@@ -156,11 +154,6 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
 
-
-    private static void logWarning(Context context,String message){
-        context.getLogger().log(message);
-    }
-
     private File saveBytesToFile(byte[] data, String filePath, Context context) throws Exception {
         ensureDirectoryExists(TMP_DIR);
         try (FileOutputStream fos = new FileOutputStream(filePath)) {
@@ -177,7 +170,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private String uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
+    private ImageMetadataDTO uploadProcessedFile(String sourceKey, File processedFile, Context context) throws Exception {
         String destinationKey = buildDestinationKey(sourceKey);
         byte[] fileBytes = readFileToBytes(processedFile);
         return uploadFileToS3(destinationKey, fileBytes, context);
@@ -194,7 +187,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         }
     }
 
-    private String uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
+    private ImageMetadataDTO uploadFileToS3(String destinationKey, byte[] fileData, Context context) {
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(MAIN_BUCKET)
                 .key(destinationKey)
@@ -207,16 +200,13 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 .build()).toString();
         context.getLogger().log("File uploaded: " + MAIN_BUCKET + "/" + destinationKey);
         context.getLogger().log("File uploaded with version ID: " + versionId);
-        return versionId;
+        ImageMetadataDTO metadata = ImageMetadataDTO.builder()
+                .objectUrl(fileUrl)
+                .versionId(versionId)
+                .build();
+        return metadata;
     }
 
-    private String failureMessage(String errorMessage) {
-        return "Failed to process file. " + errorMessage;
-    }
-
-    private void logError(Context context, String message) {
-        context.getLogger().log("Error: " + message);
-    }
 
     private SESUtil getSesUtil() {
         return new SESUtil();
@@ -235,7 +225,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         context.getLogger().log("Unprocessed file deleted: " + STAGING_BUCKET + "/" + sourceKey);
     }
 
-    private Photo savePhotoToDynamoDB(String userId, String imageUrl,  String versionId) {
+    private Photo savePhotoToDynamoDB(String userId,String imageName, String imageUrl,  String versionId) {
         Photo newImage = Photo.builder()
                 .userId(userId)
                 .imageUrl(imageUrl)
