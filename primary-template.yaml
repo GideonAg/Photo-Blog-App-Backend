@@ -990,7 +990,7 @@ Resources:
         RetrySQS:
           Type: SQS
           Properties:
-            Queue: !GetAtt ProcessingRetryQueue.QueueName
+            Queue: !GetAtt ProcessingRetryQueue.Arn
             BatchSize: 1
 
   ProcessingRetryFunction:
