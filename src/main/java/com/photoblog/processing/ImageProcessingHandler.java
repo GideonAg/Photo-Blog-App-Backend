@@ -48,6 +48,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             String sourceKey= null;
             String userEmail = null;
+            String userId = "";
         try {
 
             context.getLogger().log("Processing SQS event: " + event.getRecords().size() + " records");
@@ -63,7 +64,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 String firstName = (String) messageMap.get("firstName");
                 String lastName = (String) messageMap.get("lastName");
                 userEmail = (String) messageMap.get("email");
-                String userId = (String) messageMap.get("userId");
+                userId = (String) messageMap.get("userId");
                 String bucketName = (String) messageMap.get("bucket");
 
 
@@ -86,9 +87,9 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
 
-            Photo newPhoto = createPhotoObject("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
+            Photo newPhoto = createPhotoObject(userId,sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
 
-            databaseUtil.savePhoto(newPhoto);
+            DynamoDBUtil.savePhoto(newPhoto);
 
             context.getLogger().log("Image metadata saved to DynamoDB for: " + sourceKey);
 
