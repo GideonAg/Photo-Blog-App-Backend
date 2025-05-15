@@ -16,11 +16,13 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 import static org.mockito.Mockito.lenient;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -46,22 +48,31 @@ public class PhotoUploadHandlerTest {
     private PhotoUploadHandler handler;
     private ObjectMapper objectMapper;
     private APIGatewayProxyRequestEvent request;
-
     @BeforeEach
     public void setUp() throws Exception {
         objectMapper = new ObjectMapper();
-        handler = Mockito.spy(new PhotoUploadHandler());
+
+        // Create mocks for AWS clients
+        s3Client = mock(S3Client.class);
+        uploadUtil = mock(UploadUtil.class);
+        queueUtil = mock(QueueUtil.class);
+
+        s3Client = S3Client.builder()
+                .region(Region.EU_WEST_1)
+                .build();
+
+        handler = spy(new PhotoUploadHandler());
 
         // Using reflection to inject mocks into the handler
-        java.lang.reflect.Field s3ClientField = PhotoUploadHandler.class.getDeclaredField("s3Client");
+        Field s3ClientField = PhotoUploadHandler.class.getDeclaredField("s3Client");
         s3ClientField.setAccessible(true);
         s3ClientField.set(handler, s3Client);
 
-        java.lang.reflect.Field uploadUtilField = PhotoUploadHandler.class.getDeclaredField("uploadUtil");
+        Field uploadUtilField = PhotoUploadHandler.class.getDeclaredField("uploadUtil");
         uploadUtilField.setAccessible(true);
         uploadUtilField.set(handler, uploadUtil);
 
-        java.lang.reflect.Field queueUtilField = PhotoUploadHandler.class.getDeclaredField("queueUtil");
+        Field queueUtilField = PhotoUploadHandler.class.getDeclaredField("queueUtil");
         queueUtilField.setAccessible(true);
         queueUtilField.set(handler, queueUtil);
 
