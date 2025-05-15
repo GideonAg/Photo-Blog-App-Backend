@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.dto.ImageMetadataDTO;
 import com.photoblog.dto.ImageProcessingRequest;
 import com.photoblog.models.Photo;
+import com.photoblog.utils.DynamoDBUtil;
 import com.photoblog.utils.SESUtil;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -35,7 +36,10 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private final String DESTINATION_PREFIX = "images/";
     private final S3Client s3Client = createS3Client();
     private String WATERMARK_TEXT = null;
-    private SESUtil sesUtil = getSesUtil();
+    private final SESUtil sesUtil = getSesUtil();
+    private final DynamoDBUtil databaseUtil = getDatabaseUtil();
+
+
 
     @Override
     public String handleRequest(SQSEvent event, Context context) {
@@ -81,7 +85,10 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
 
-            savePhotoToDynamoDB("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
+            Photo newPhoto = createPhotoObject("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
+
+            databaseUtil.savePhoto(newPhoto);
+
             context.getLogger().log("Image metadata saved to DynamoDB for: " + sourceKey);
 
             context.getLogger().log("Deleting unprocessed file: " + sourceKey);
@@ -179,7 +186,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
     private String buildDestinationKey(String sourceKey) {
-        String originalFilename = sourceKey.startsWith("images/") ? sourceKey.substring("images/".length()) : sourceKey;
+        String originalFilename = sourceKey.startsWith("") ? sourceKey.substring("".length()) : sourceKey;
         return DESTINATION_PREFIX + originalFilename;
     }
 
@@ -227,7 +234,11 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         context.getLogger().log("Unprocessed file deleted: " + STAGING_BUCKET + "/" + sourceKey);
     }
 
-    private Photo savePhotoToDynamoDB(String userId,String imageName, String imageUrl,  String versionId) {
+    private DynamoDBUtil getDatabaseUtil() {
+        return new DynamoDBUtil();
+    }
+
+    private Photo createPhotoObject(String userId,String imageName, String imageUrl,  String versionId) {
         Photo newImage = Photo.builder()
                 .userId(userId)
                 .imageUrl(imageUrl)
