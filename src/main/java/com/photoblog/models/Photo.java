@@ -1,11 +1,11 @@
 package com.photoblog.models;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import com.photoblog.utils.LocalDateTimeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Data
@@ -43,15 +43,17 @@ public class Photo {
     private Status status;
 
     @DynamoDBAttribute
+    @DynamoDBTypeConverted(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
 
     @DynamoDBAttribute
+    @DynamoDBTypeConverted(converter = LocalDateTimeConverter.class)
     private LocalDateTime updatedAt;
 
     @DynamoDBAttribute
     private String versionId;
 
-    public enum Status{
+    public enum Status {
         ACTIVE,
         DELETED
     }
