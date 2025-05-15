@@ -43,9 +43,11 @@ public class Photo {
     private Status status;
 
     @DynamoDBAttribute
+    @DynamoDBTyped(DynamoDBMapperFieldModel.DynamoDBAttributeType.S)
     private LocalDateTime createdAt;
 
     @DynamoDBAttribute
+    @DynamoDBTyped(DynamoDBMapperFieldModel.DynamoDBAttributeType.S)
     private LocalDateTime updatedAt;
 
     @DynamoDBAttribute
