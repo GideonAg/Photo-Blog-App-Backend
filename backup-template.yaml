@@ -66,8 +66,7 @@ Parameters:
   SystemAlertTopicArn:
     Type: String
     Description: ARN of the system alert SNS topic in the primary region
-    Default: !ImportValue
-      Fn::Sub: "${AppName}-${StageName}-system-alert-topic-arn"
+    Default: "arn:aws:sns:eu-west-1:711387109786:photo-blog-group1-dev-system-alerts"
 
 Resources:
   BackupBucket:
