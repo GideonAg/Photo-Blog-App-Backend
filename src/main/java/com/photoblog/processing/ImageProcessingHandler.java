@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
+// import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private static final String TMP_DIR = "/tmp";
     private final String STAGING_BUCKET = System.getenv("STAGING_BUCKET");
     private final String MAIN_BUCKET = System.getenv("MAIN_BUCKET");
-    private final String UPLOADED_TIME = Instant.now().toString();
+    // private final String UPLOADED_TIME = Instant.now().toString();
     private final S3Client s3Client = createS3Client();
     private String WATERMARK_TEXT = null;
     private final SESUtil sesUtil = getSesUtil();
@@ -189,7 +189,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
     private String buildDestinationKey(String sourceKey) {
         String originalFilename = sourceKey.startsWith("/images") ? sourceKey.substring("/images".length()) : sourceKey;
-        return UPLOADED_TIME + originalFilename;
+        return originalFilename;
     }
 
     private byte[] readFileToBytes(File file) throws Exception {
