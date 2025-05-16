@@ -810,8 +810,21 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
+        - Policy:
+            PolicyName: !Sub "${AppName}-${StageName}-PhotoDeleteS3Policy"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:GetObject
+                    - s3:DeleteObject
+                    - s3:ListBucket
+                    - s3:ListBucketVersions
+                  Resource:
+                    - !GetAtt MainBucket.Arn
+                    - !Sub "${MainBucket.Arn}/*"
       Events:
         ApiEvent:
           Type: Api
@@ -874,6 +887,11 @@ Resources:
             TableName: !Ref PhotosTable
         - S3ReadPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListBucketVersions
+              Resource: !Sub arn:aws:s3:::${MainBucket}
       Events:
         ApiEvent:
           Type: Api
@@ -905,6 +923,11 @@ Resources:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:CopyObject
+              Resource: !Sub arn:aws:s3:::${MainBucket}/*
       Events:
         ApiEvent:
           Type: Api
@@ -936,6 +959,11 @@ Resources:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListBucketVersions
+              Resource: !Sub arn:aws:s3:::${MainBucket}
       Events:
         ApiEvent:
           Type: Api
