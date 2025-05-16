@@ -15,7 +15,7 @@ import com.photoblog.utils.PhotoShareResponse;
 import com.photoblog.utils.S3Util;
 
 public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    protected S3Util s3Util;
+    private S3Util s3Util;
     private final ObjectMapper mapper;
 
     public PhotoShareHandler() {
@@ -48,6 +48,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withBody(body).withStatusCode(200);
         } 
         catch (RuntimeException e) {
+            context.getLogger().log(e.getMessage());
             PhotoShareResponse errorResponse = new PhotoShareResponse("There was an error while generating the link");
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
