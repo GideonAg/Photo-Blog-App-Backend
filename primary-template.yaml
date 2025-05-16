@@ -959,7 +959,10 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:ListBucketVersions
-              Resource: !Sub arn:aws:s3:::${MainBucket}
+                - s3:DeleteObjectVersion
+              Resource:
+                - !Sub arn:aws:s3:::${MainBucket}/*
+                - !Sub arn:aws:s3:::${MainBucket}
       Events:
         ApiEvent:
           Type: Api
