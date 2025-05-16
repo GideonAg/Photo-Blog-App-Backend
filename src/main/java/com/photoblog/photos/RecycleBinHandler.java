@@ -79,6 +79,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             // Fetch previous versions and generate presigned URLs
             List<Map<String, String>> response = new ArrayList<>();
             for (Photo photo : deletedPhotos) {
+                context.getLogger().log(photo.getImageName());
                 String photoId = photo.getPhotoId();
                 String s3Key = photo.getImageName();
 
@@ -93,11 +94,13 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
                 // Find the previous version (skip the latest, which may be a delete marker)
                 String previousVersionId = null;
                 for (ObjectVersion version : versions) {
-                    if (version.isLatest()) {
+                    if (!version.isLatest()) { // Skip the delete marker (latest version)
                         previousVersionId = version.versionId();
+                        context.getLogger().log("Selected previous versionId: " + previousVersionId + " for photoId=" + photoId);
                         break;
                     }
                 }
+                context.getLogger().log("No previous version found");
 
                 if (previousVersionId != null) {
                     // Generate presigned URL for the previous version
