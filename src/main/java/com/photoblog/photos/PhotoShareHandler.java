@@ -39,6 +39,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             }
 
             String shareLink = s3Util.getImage(photo.getImageName(), photoId);
+            context.getLogger().log("GOT HERE" + shareLink);
 
             PhotoShareResponse photoShareResponse = new PhotoShareResponse("Share link generated successfully", shareLink);
             String body = mapper.writeValueAsString(photoShareResponse);
@@ -55,7 +56,8 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withStatusCode(500);
         }
         catch (Exception e) {
-            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error");
+            context.getLogger().log(e.getMessage());
+            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error " + e.getMessage());
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
             } catch (Exception jsonEx) {
