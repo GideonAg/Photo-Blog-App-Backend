@@ -126,7 +126,7 @@ Resources:
           - Sid: AllowReplication
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${PrimaryAccountId}:role/${AppName}-${StageName}-s3-replication-role"
+              AWS: !GetAtt ReplicationRole.Arn
             Action:
               - s3:ReplicateObject
               - s3:ReplicateDelete
