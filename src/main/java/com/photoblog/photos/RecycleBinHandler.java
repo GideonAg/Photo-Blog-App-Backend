@@ -10,13 +10,11 @@ import com.photoblog.utils.DynamoDBUtil;
 import com.photoblog.utils.HeadersUtil;
 import com.photoblog.utils.S3Util;
 import com.google.gson.Gson;
-import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectVersion;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,12 +22,12 @@ import java.util.List;
 import java.util.Map;
 
 public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private  DynamoDBUtil dynamoDBUtil;
+    // private  DynamoDBUtil dynamoDBUtil;
     private  S3Util s3Util;
     private final Gson gson = new Gson();
 
     public RecycleBinHandler() {
-        this.dynamoDBUtil = new DynamoDBUtil();
+        // this.dynamoDBUtil = new DynamoDBUtil();
         this.s3Util = new S3Util();
     }
 
@@ -72,12 +70,17 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(new ArrayList<>()));
             }
+            if(deletedPhotos.isEmpty()){
+                context.getLogger().log("Dynamodb query is empty");
+            }
+            context.getLogger().log("Dynamodb query is not empty");
+            
 
             // Fetch previous versions and generate presigned URLs
             List<Map<String, String>> response = new ArrayList<>();
             for (Photo photo : deletedPhotos) {
                 String photoId = photo.getPhotoId();
-                String s3Key = userId + "/" + photoId;
+                String s3Key = photo.getImageName();
 
                 // List object versions to find the previous version
                 ListObjectVersionsRequest versionsRequest = ListObjectVersionsRequest.builder()
@@ -215,7 +218,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             }
 
             // Delete all versions and delete markers from S3
-            String s3Key = userId + "/" + photoId;
+            String s3Key = photo.getImageName();
             ListObjectVersionsRequest listVersionsRequest = ListObjectVersionsRequest.builder()
                     .bucket(s3Util.getMainBucket())
                     .prefix(s3Key)
