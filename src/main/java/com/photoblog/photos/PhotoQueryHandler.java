@@ -46,6 +46,7 @@ public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestE
             }
             context.getLogger().log("Retrieved " + photos.size() + " active photos for user: " + userId);
 
+
             List<Map<String, String>> photoResponses = photos.stream()
             .map(photo -> {
                 Map<String, String> photoInfo = new HashMap<>();
