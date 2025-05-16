@@ -155,13 +155,25 @@ Resources:
           AttributeType: S
         - AttributeName: createdAt
           AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: imageName
+          AttributeType: S
+        - AttributeName: imageUrl
+          AttributeType: S
+        - AttributeName: updatedAt
+          AttributeType: S
+        - AttributeName: versionId
+          AttributeType: S
       KeySchema:
         - AttributeName: photoId
           KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: UserIdIndex
           KeySchema:
-            - AttributeName: userId
+            - AttributeName: photoId
               KeyType: HASH
             - AttributeName: createdAt
               KeyType: RANGE
