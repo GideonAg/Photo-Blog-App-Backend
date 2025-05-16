@@ -67,7 +67,6 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
             // Load the Photo object
             Photo photo = DynamoDBUtil.getPhotoById(userId, photoId);
             context.getLogger().log("USER ID:" + userId + "   PHOTO_ID" + photoId);
-            
             if (photo == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(404)
