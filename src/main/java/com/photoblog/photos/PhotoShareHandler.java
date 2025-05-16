@@ -38,7 +38,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
                 return response.withBody(mapper.writeValueAsString(new PhotoShareResponse("Failed to fetch link. Not authorized"))).withStatusCode(500);
             }
 
-            String shareLink = s3Util.getImage(userId, photoId);
+            String shareLink = s3Util.getImage(photo.getImageName(), photoId);
 
             PhotoShareResponse photoShareResponse = new PhotoShareResponse("Share link generated successfully", shareLink);
             String body = mapper.writeValueAsString(photoShareResponse);
