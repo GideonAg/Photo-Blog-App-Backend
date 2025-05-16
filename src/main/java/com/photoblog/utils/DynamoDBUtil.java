@@ -42,7 +42,7 @@ public class DynamoDBUtil {
      */
     public static Photo getPhotoById(String userId, String photoId) throws Exception {
         try {
-            return dynamoDBMapper.load(Photo.class, userId, photoId);
+            return dynamoDBMapper.load(Photo.class, photoId, userId);
         } catch (DynamoDBMappingException e) {
             throw new Exception("Error mapping photo data: " + e.getMessage(), e);
         }
@@ -76,7 +76,7 @@ public class DynamoDBUtil {
      * @throws Exception
      */
     public static Photo updatePhotoStatus(String userId, String photoId, Status status) throws Exception {
-        Photo photo = getPhotoById(userId, photoId);
+        Photo photo = getPhotoById(photoId, userId);
         if (photo != null) {
             photo.setStatus(status);
             savePhoto(photo);
@@ -145,7 +145,7 @@ public class DynamoDBUtil {
      * @throws Exception
      */
     public static Photo updatePhotoVersionId(String userId, String photoId, String versionId) throws Exception {
-        Photo photo = getPhotoById(userId, photoId);
+        Photo photo = getPhotoById(photoId, userId);
         if (photo != null) {
             photo.setVersionId(versionId);
             savePhoto(photo);
