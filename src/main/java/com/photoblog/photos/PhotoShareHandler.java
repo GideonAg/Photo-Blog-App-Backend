@@ -55,7 +55,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withStatusCode(500);
         }
         catch (Exception e) {
-            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error");
+            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error " + e.getMessage());
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
             } catch (Exception jsonEx) {
