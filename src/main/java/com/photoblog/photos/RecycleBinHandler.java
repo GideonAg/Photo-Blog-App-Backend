@@ -98,7 +98,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
 
                 if (previousVersionId != null) {
                     // Generate presigned URL for the previous version
-                    String presignedUrl = s3Util.getDeletedImage(userId, photoId, previousVersionId);
+                    String presignedUrl = s3Util.getDeletedImage(photo.getImageName(), photoId, previousVersionId);
                     Map<String, String> photoInfo = new HashMap<>();
                     photoInfo.put("photoId", photoId);
                     photoInfo.put("imageName", photo.getImageName());
@@ -158,7 +158,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             }
 
             // Restore the image
-            s3Util.restoreImage(userId, photoId, photo.getVersionId());
+            s3Util.restoreImage(photo.getImageName(), photoId, photo.getVersionId());
 
             // Update Photo status
             photo.setStatus(Photo.Status.ACTIVE);
