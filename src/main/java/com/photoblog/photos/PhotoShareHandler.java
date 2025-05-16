@@ -30,7 +30,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
 
         try {
             Map<String, String> authorizeMap = AuthorizerClaims.extractCognitoClaims(requestEvent);
-            String userId = authorizeMap.get("sub");
+            String userId = authorizeMap.get("userId");
             String photoId = requestEvent.getPathParameters().get("photoId");
 
             Photo photo = DynamoDBUtil.getPhotoById(userId, photoId);
