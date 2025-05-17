@@ -998,9 +998,6 @@ Resources:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: "*"
-              Condition:
-                StringEquals:
-                  ses:FromAddress: !Ref EmailSender
       Events:
         SNSEvent:
           Type: SNS
