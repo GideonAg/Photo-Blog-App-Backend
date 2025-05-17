@@ -43,7 +43,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             alertMessage.put("primaryRegion", primaryRegion);
             alertMessage.put("healthy", String.valueOf(isPrimaryRegionHealthy));
 
-            if (isPrimaryRegionHealthy) {
+            if (!isPrimaryRegionHealthy) {
                 int failures = consecutiveFailures.incrementAndGet();
                 alertMessage.put("consecutiveFailures", String.valueOf(failures));
                 context.getLogger().log("Primary region unhealthy, failures: " + failures);
