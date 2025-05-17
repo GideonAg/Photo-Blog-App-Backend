@@ -145,6 +145,6 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             return false;
         }
 
-        return true;
+        return false;
     }
 }

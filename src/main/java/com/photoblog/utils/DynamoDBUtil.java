@@ -5,16 +5,18 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMappingException;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.photoblog.models.Photo;
 import com.photoblog.models.Photo.Status;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * The type Dynamo db util.
+ * The type Dynamo DB util.
  */
 public class DynamoDBUtil {
     private static final String PHOTO_TABLE = System.getenv("PHOTOS_TABLE");
@@ -39,7 +41,11 @@ public class DynamoDBUtil {
      * @return the photo by id
      */
     public static Photo getPhotoById(String userId, String photoId) throws Exception {
-        return dynamoDBMapper.load(Photo.class, userId, photoId);
+        try {
+            return dynamoDBMapper.load(Photo.class, photoId, userId);
+        } catch (DynamoDBMappingException e) {
+            throw new Exception("Error mapping photo data: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -67,10 +73,10 @@ public class DynamoDBUtil {
      * @param photoId the photo id
      * @param status  the status
      * @return the photo
-     * @throws Exception 
+     * @throws Exception
      */
     public static Photo updatePhotoStatus(String userId, String photoId, Status status) throws Exception {
-        Photo photo = getPhotoById(userId, photoId);
+        Photo photo = getPhotoById(photoId, userId);
         if (photo != null) {
             photo.setStatus(status);
             savePhoto(photo);
@@ -86,22 +92,27 @@ public class DynamoDBUtil {
      * @return the photos by user id and status
      */
     public static List<Photo> getPhotosByUserIdAndStatus(String userId, Status status) {
-        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-        expressionAttributeValues.put(":userId", new AttributeValue().withS(userId));
-        expressionAttributeValues.put(":status", new AttributeValue().withS(status.name()));
+        try {
+            Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+            expressionAttributeValues.put(":userId", new AttributeValue().withS(userId));
+            expressionAttributeValues.put(":status", new AttributeValue().withS(status.name()));
 
-        Map<String, String> expressionAttributeNames = new HashMap<>();
-        expressionAttributeNames.put("#status", "status");
+            Map<String, String> expressionAttributeNames = new HashMap<>();
+            expressionAttributeNames.put("#status", "status");
 
-        DynamoDBQueryExpression<Photo> queryExpression = new DynamoDBQueryExpression<Photo>()
-                .withKeyConditionExpression("userId = :userId")
-                .withFilterExpression("#status = :status")
-                .withExpressionAttributeValues(expressionAttributeValues)
-                .withExpressionAttributeNames(expressionAttributeNames)
-                .withIndexName("UserIdIndex")
-                .withConsistentRead(false);
+            DynamoDBQueryExpression<Photo> queryExpression = new DynamoDBQueryExpression<Photo>()
+                    .withKeyConditionExpression("userId = :userId")
+                    .withFilterExpression("#status = :status")
+                    .withExpressionAttributeValues(expressionAttributeValues)
+                    .withExpressionAttributeNames(expressionAttributeNames)
+                    .withIndexName("UserIdIndex")
+                    .withConsistentRead(false);
 
-        return dynamoDBMapper.query(Photo.class, queryExpression);
+            return dynamoDBMapper.query(Photo.class, queryExpression);
+        } catch (DynamoDBMappingException e) {
+            System.err.println("Error querying photos for userId " + userId + " with status " + status + ": " + e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     /**
@@ -131,10 +142,10 @@ public class DynamoDBUtil {
      * @param photoId   the photo id
      * @param versionId the version id
      * @return the photo
-     * @throws Exception 
+     * @throws Exception
      */
     public static Photo updatePhotoVersionId(String userId, String photoId, String versionId) throws Exception {
-        Photo photo = getPhotoById(userId, photoId);
+        Photo photo = getPhotoById(photoId, userId);
         if (photo != null) {
             photo.setVersionId(versionId);
             savePhoto(photo);

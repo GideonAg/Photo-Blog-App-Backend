@@ -10,13 +10,11 @@ import com.photoblog.utils.DynamoDBUtil;
 import com.photoblog.utils.HeadersUtil;
 import com.photoblog.utils.S3Util;
 import com.google.gson.Gson;
-import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectVersion;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,12 +22,12 @@ import java.util.List;
 import java.util.Map;
 
 public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private  DynamoDBUtil dynamoDBUtil;
+    // private  DynamoDBUtil dynamoDBUtil;
     private  S3Util s3Util;
     private final Gson gson = new Gson();
 
     public RecycleBinHandler() {
-        this.dynamoDBUtil = new DynamoDBUtil();
+        // this.dynamoDBUtil = new DynamoDBUtil();
         this.s3Util = new S3Util();
     }
 
@@ -72,12 +70,18 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(new ArrayList<>()));
             }
+            if(deletedPhotos.isEmpty()){
+                context.getLogger().log("Dynamodb query is empty");
+            }
+            context.getLogger().log("Dynamodb query is not empty");
+            
 
             // Fetch previous versions and generate presigned URLs
             List<Map<String, String>> response = new ArrayList<>();
             for (Photo photo : deletedPhotos) {
+                context.getLogger().log(photo.getImageName());
                 String photoId = photo.getPhotoId();
-                String s3Key = userId + "/" + photoId;
+                String s3Key = photo.getImageName();
 
                 // List object versions to find the previous version
                 ListObjectVersionsRequest versionsRequest = ListObjectVersionsRequest.builder()
@@ -90,15 +94,17 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
                 // Find the previous version (skip the latest, which may be a delete marker)
                 String previousVersionId = null;
                 for (ObjectVersion version : versions) {
-                    if (version.isLatest()) {
+                    if (!version.isLatest()) { // Skip the delete marker (latest version)
                         previousVersionId = version.versionId();
+                        context.getLogger().log("Selected previous versionId: " + previousVersionId + " for photoId=" + photoId);
                         break;
                     }
                 }
+                context.getLogger().log("No previous version found");
 
                 if (previousVersionId != null) {
                     // Generate presigned URL for the previous version
-                    String presignedUrl = s3Util.getDeletedImage(userId, photoId, previousVersionId);
+                    String presignedUrl = s3Util.getDeletedImage(photo.getImageName(), photoId, previousVersionId);
                     Map<String, String> photoInfo = new HashMap<>();
                     photoInfo.put("photoId", photoId);
                     photoInfo.put("imageName", photo.getImageName());
@@ -158,7 +164,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             }
 
             // Restore the image
-            s3Util.restoreImage(userId, photoId, photo.getVersionId());
+            s3Util.restoreImage(photo.getImageName(), photoId, photo.getVersionId());
 
             // Update Photo status
             photo.setStatus(Photo.Status.ACTIVE);
@@ -215,7 +221,7 @@ public class RecycleBinHandler implements RequestHandler<APIGatewayProxyRequestE
             }
 
             // Delete all versions and delete markers from S3
-            String s3Key = userId + "/" + photoId;
+            String s3Key = photo.getImageName();
             ListObjectVersionsRequest listVersionsRequest = ListObjectVersionsRequest.builder()
                     .bucket(s3Util.getMainBucket())
                     .prefix(s3Key)
