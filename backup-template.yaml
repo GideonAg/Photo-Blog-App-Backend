@@ -5,7 +5,7 @@ Description: Backup resources for Photo Blog App Disaster Recovery in eu-central
 Globals:
   Function:
     Runtime: java21
-    Timeout: 60
+    Timeout: 300
     MemorySize: 512
     Environment:
       Variables:
@@ -998,9 +998,6 @@ Resources:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: "*"
-              Condition:
-                StringEquals:
-                  ses:FromAddress: !Ref EmailSender
       Events:
         SNSEvent:
           Type: SNS
