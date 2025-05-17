@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.SNSUtil;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
 import software.amazon.awssdk.services.cloudwatch.model.Metric;
@@ -14,8 +13,6 @@ import software.amazon.awssdk.services.health.HealthClient;
 import software.amazon.awssdk.services.health.model.DescribeEventsRequest;
 import software.amazon.awssdk.services.health.model.Event;
 import software.amazon.awssdk.services.health.model.EventStatusCode;
-import software.amazon.awssdk.services.lambda.LambdaClient;
-import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -27,13 +24,12 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
 
     private final HealthClient healthClient = HealthClient.builder().build();
     private final CloudWatchClient cloudWatchClient = CloudWatchClient.builder().build();
-    private final LambdaClient lambdaClient = LambdaClient.builder().build();
     private final SNSUtil snsUtil = new SNSUtil();
     private static final AtomicInteger consecutiveFailures = new AtomicInteger(0);
     private static final int FAILURE_THRESHOLD = 2;
 
     private final String primaryRegion = System.getenv("PRIMARY_REGION");
-    private final String systemAlertTopic = System.getenv("SYSTEM_ALERT_TOPIC");
+    private final String backupAlertTopic = System.getenv("BACKUP_ALERT_TOPIC");
     private final String apiGatewayId = System.getenv("API_GATEWAY_ID");
 
     @Override
@@ -51,7 +47,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                 int failures = consecutiveFailures.incrementAndGet();
                 alertMessage.put("consecutiveFailures", String.valueOf(failures));
                 context.getLogger().log("Primary region unhealthy, failures: " + failures);
-                snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
+                snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
 
                 if (failures >= FAILURE_THRESHOLD) {
                     response.put("status", "triggered");
@@ -59,7 +55,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     consecutiveFailures.set(0);
                     alertMessage.put("event", "disaster_recovery_triggered");
                     alertMessage.put("details", "DR should be triggered due to " + failures + " consecutive failures");
-                    snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
+                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
                 } else {
                     response.put("status", "warning");
                     response.put("message", "Primary region unhealthy, waiting for threshold (" + failures + "/" + FAILURE_THRESHOLD + ")");
@@ -68,7 +64,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                 consecutiveFailures.set(0);
                 response.put("status", "healthy");
                 response.put("message", "Primary region is healthy");
-                snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
+                snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
             }
 
             return response;
@@ -81,12 +77,11 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             errorMessage.put("event", "region_monitor_error");
             errorMessage.put("error", e.getMessage());
             errorMessage.put("timestamp", Instant.now().toString());
-            snsUtil.publishMessage(systemAlertTopic, errorMessage, context);
+            snsUtil.publishMessage(backupAlertTopic, errorMessage, context);
             return response;
         } finally {
             healthClient.close();
             cloudWatchClient.close();
-            lambdaClient.close();
             snsUtil.close();
         }
     }
@@ -145,6 +140,6 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             return false;
         }
 
-        return false;
+        return true;
     }
 }
