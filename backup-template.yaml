@@ -992,8 +992,15 @@ Resources:
           PRIMARY_REGION: !Ref PrimaryRegion
           BACKUP_REGION: !Ref AWS::Region
       Policies:
-        - SESCrudPolicy:
-            IdentityName: !Ref DomainName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref EmailSender
       Events:
         SNSEvent:
           Type: SNS
