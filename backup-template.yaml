@@ -1055,6 +1055,11 @@ Resources:
             Topic: !Ref BackupAlertTopic
 
 Outputs:
+  RegionMonitorFunctionArn:
+    Description: ARN of the RegionMonitorFunction
+    Value: !GetAtt RegionMonitorFunction.Arn
+    Export:
+      Name: !Sub "${AppName}-${StageName}-region-monitor-function-arn"
   BackupBucketName:
     Description: Name of the backup S3 bucket
     Value: !Ref BackupBucket
