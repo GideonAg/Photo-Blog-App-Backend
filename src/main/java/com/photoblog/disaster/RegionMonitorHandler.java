@@ -10,7 +10,6 @@ import software.amazon.awssdk.services.cloudwatch.model.MetricAlarm;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RegionMonitorHandler implements RequestHandler<Map<String, String>, Map<String, String>> {
@@ -46,7 +45,11 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                 int failures = consecutiveFailures.incrementAndGet();
                 alertMessage.put("consecutiveFailures", String.valueOf(failures));
                 context.getLogger().log("Primary region unhealthy - Frontend: " + isFrontendHealthy + ", Backend: " + isBackendHealthy + ", Failures: " + failures);
-                snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                try {
+                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                } catch (Exception e) {
+                    context.getLogger().log("Failed to publish initial alert message: " + e.getMessage());
+                }
 
                 if (failures >= FAILURE_THRESHOLD) {
                     response.put("status", "triggered");
@@ -54,7 +57,11 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     consecutiveFailures.set(0);
                     alertMessage.put("event", "disaster_recovery_triggered");
                     alertMessage.put("details", "DR should be triggered due to " + failures + " consecutive failures. Frontend Healthy: " + isFrontendHealthy + ", Backend Healthy: " + isBackendHealthy);
-                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                    try {
+                        snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                    } catch (Exception e) {
+                        context.getLogger().log("Failed to publish disaster recovery message: " + e.getMessage());
+                    }
                 } else {
                     response.put("status", "warning");
                     response.put("message", "Primary region unhealthy, waiting for threshold (" + failures + "/" + FAILURE_THRESHOLD + ")");
@@ -63,7 +70,11 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                 consecutiveFailures.set(0);
                 response.put("status", "healthy");
                 response.put("message", "Primary region is healthy");
-                snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                try {
+                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
+                } catch (Exception e) {
+                    context.getLogger().log("Failed to publish healthy status message: " + e.getMessage());
+                }
             }
 
             return response;
@@ -76,11 +87,20 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             errorMessage.put("event", "region_monitor_error");
             errorMessage.put("error", e.getMessage());
             errorMessage.put("timestamp", Instant.now().toString());
-            snsUtil.publishMessage(backupAlertTopic, errorMessage, context);
+            try {
+                snsUtil.publishMessage(backupAlertTopic, errorMessage, context);
+            } catch (Exception e2) {
+                context.getLogger().log("Failed to publish error message: " + e2.getMessage());
+            }
             return response;
         } finally {
             cloudWatchClient.close();
-            snsUtil.close();
+            try {
+                Thread.sleep(5000);
+                snsUtil.close();
+            } catch (InterruptedException e) {
+                context.getLogger().log("Interrupted while waiting to close SNSUtil: " + e.getMessage());
+            }
         }
     }
 
