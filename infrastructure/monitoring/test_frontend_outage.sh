@@ -29,7 +29,7 @@ aws cloudwatch set-alarm-state \
 
 # Wait for alarm state to propagate
 echo "Waiting for alarm state to propagate..."
-sleep 30
+sleep 10
 
 # Step 3: Invoke RegionMonitorFunction twice to exceed failure threshold
 echo "Invoking RegionMonitorFunction to detect unhealthy state..."
@@ -48,8 +48,8 @@ for i in {1..2}; do
     break
   fi
 
-  echo "Waiting 30 seconds before next invocation..."
-  sleep 30
+  echo "Waiting 10 seconds before next invocation..."
+  sleep 10
 done
 
 # Step 4: Restore alarm to OK state after test
