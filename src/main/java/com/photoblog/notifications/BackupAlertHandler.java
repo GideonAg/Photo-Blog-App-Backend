@@ -105,7 +105,6 @@ public class BackupAlertHandler implements RequestHandler<SNSEvent, Void> {
             }
         }
 
-        sesClient.close();
         return null;
     }
 
