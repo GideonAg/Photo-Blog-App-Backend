@@ -11,6 +11,7 @@ import com.photoblog.utils.DynamoDBUtil;
 import com.photoblog.utils.HeadersUtil;
 import com.photoblog.utils.S3Util;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,15 +46,22 @@ public class PhotoQueryHandler implements RequestHandler<APIGatewayProxyRequestE
             }
             context.getLogger().log("Retrieved " + photos.size() + " active photos for user: " + userId);
 
-            List<String> photoUrls = photos.stream()
-                    .map(photo -> s3Util.getImage(userId, photo.getPhotoId()))
-                    .toList();
 
-            context.getLogger().log("Generated presigned URLs for " + photoUrls.size() + " photos");
+            List<Map<String, String>> photoResponses = photos.stream()
+            .map(photo -> {
+                Map<String, String> photoInfo = new HashMap<>();
+                photoInfo.put("photoId", photo.getPhotoId());
+                photoInfo.put("url", s3Util.getImage(photo.getImageName(), photo.getPhotoId()));
+                return photoInfo;
+            })
+            .toList();
+
+            context.getLogger().log("Generated presigned URLs for " + photoResponses.size() + " photos");
+
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
                     .withHeaders(HeadersUtil.getHeaders())
-                    .withBody(objectMapper.writeValueAsString(photoUrls));
+                    .withBody(objectMapper.writeValueAsString(photoResponses));
         } catch (IllegalStateException | IllegalArgumentException e) {
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(401)

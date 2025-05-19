@@ -1,5 +1,4 @@
 package com.photoblog.photos;
-
 // import com.amazonaws.services.lambda.runtime.Context;
 // import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 // import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -306,4 +305,5 @@ public class PhotoUploadHandlerTest {
     //         assertTrue(response.getBody().contains("Invalid base64 encoding"));
     //     }
     // }
+
 }

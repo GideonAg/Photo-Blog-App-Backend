@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
+// import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private static final String TMP_DIR = "/tmp";
     private final String STAGING_BUCKET = System.getenv("STAGING_BUCKET");
     private final String MAIN_BUCKET = System.getenv("MAIN_BUCKET");
-    private final String UPLOADED_TIME = Instant.now().toString();
+    // private final String UPLOADED_TIME = Instant.now().toString();
     private final S3Client s3Client = createS3Client();
     private String WATERMARK_TEXT = null;
     private final SESUtil sesUtil = getSesUtil();
@@ -48,6 +48,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
             String sourceKey= null;
             String userEmail = null;
+            String userId = "";
         try {
 
             context.getLogger().log("Processing SQS event: " + event.getRecords().size() + " records");
@@ -63,7 +64,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 String firstName = (String) messageMap.get("firstName");
                 String lastName = (String) messageMap.get("lastName");
                 userEmail = (String) messageMap.get("email");
-                String userId = (String) messageMap.get("userId");
+                userId = (String) messageMap.get("userId");
                 String bucketName = (String) messageMap.get("bucket");
 
 
@@ -86,9 +87,9 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
             context.getLogger().log("Image processing completed for: " + sourceKey);
             sesUtil.sendProcessingCompletedEmail(userEmail, sourceKey);
 
-            Photo newPhoto = createPhotoObject("userId",sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
+            Photo newPhoto = createPhotoObject(userId,sourceKey, imageMetadata.getObjectUrl(), imageMetadata.getVersionId() );
 
-            databaseUtil.savePhoto(newPhoto);
+            DynamoDBUtil.savePhoto(newPhoto);
 
             context.getLogger().log("Image metadata saved to DynamoDB for: " + sourceKey);
 
@@ -188,7 +189,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
 
     private String buildDestinationKey(String sourceKey) {
         String originalFilename = sourceKey.startsWith("/images") ? sourceKey.substring("/images".length()) : sourceKey;
-        return UPLOADED_TIME + originalFilename;
+        return originalFilename;
     }
 
     private byte[] readFileToBytes(File file) throws Exception {
