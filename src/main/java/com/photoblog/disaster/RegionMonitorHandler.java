@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RegionMonitorHandler implements RequestHandler<Map<String, String>, Map<String, String>> {
+public class RegionMonitorHandler implements RequestHandler<Map<String, Object>, Map<String, String>> {
 
     private static CloudWatchClient cloudWatchClient;
     private static SNSUtil snsUtil;
@@ -40,7 +40,7 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
     }
 
     @Override
-    public Map<String, String> handleRequest(Map<String, String> input, Context context) {
+    public Map<String, String> handleRequest(Map<String, Object> input, Context context) {
         Map<String, String> response = new HashMap<>();
 
         try {
