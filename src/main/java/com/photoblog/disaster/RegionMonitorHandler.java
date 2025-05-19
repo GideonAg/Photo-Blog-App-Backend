@@ -14,8 +14,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RegionMonitorHandler implements RequestHandler<Map<String, String>, Map<String, String>> {
 
-    private final CloudWatchClient cloudWatchClient = CloudWatchClient.builder().build();
-    private final SNSUtil snsUtil = new SNSUtil();
+    private static CloudWatchClient cloudWatchClient;
+    private static SNSUtil snsUtil;
+
     private static final AtomicInteger consecutiveFailures = new AtomicInteger(0);
     private static final int FAILURE_THRESHOLD = 2;
 
@@ -24,83 +25,122 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
     private final String frontendAlarmName = System.getenv("FRONTEND_ALARM_NAME");
     private final String backendAlarmName = System.getenv("BACKEND_ALARM_NAME");
 
+    private synchronized CloudWatchClient getCloudWatchClient() {
+        if (cloudWatchClient == null) {
+            cloudWatchClient = CloudWatchClient.builder().build();
+        }
+        return cloudWatchClient;
+    }
+
+    private synchronized SNSUtil getSNSUtil() {
+        if (snsUtil == null) {
+            snsUtil = new SNSUtil();
+        }
+        return snsUtil;
+    }
+
     @Override
     public Map<String, String> handleRequest(Map<String, String> input, Context context) {
         Map<String, String> response = new HashMap<>();
+
         try {
             Map<String, Boolean> healthStatus = checkPrimaryRegionHealth(context);
             boolean isFrontendHealthy = healthStatus.get("frontend");
             boolean isBackendHealthy = healthStatus.get("backend");
             boolean isPrimaryRegionHealthy = isFrontendHealthy && isBackendHealthy;
 
-            Map<String, String> alertMessage = new HashMap<>();
-            alertMessage.put("event", "region_monitor_check");
-            alertMessage.put("timestamp", Instant.now().toString());
-            alertMessage.put("primaryRegion", primaryRegion);
-            alertMessage.put("frontendHealthy", String.valueOf(isFrontendHealthy));
-            alertMessage.put("backendHealthy", String.valueOf(isBackendHealthy));
-            alertMessage.put("healthy", String.valueOf(isPrimaryRegionHealthy));
+            Map<String, String> alertMessage = createBaseAlertMessage(isFrontendHealthy, isBackendHealthy, isPrimaryRegionHealthy);
 
             if (!isPrimaryRegionHealthy) {
-                int failures = consecutiveFailures.incrementAndGet();
-                alertMessage.put("consecutiveFailures", String.valueOf(failures));
-                context.getLogger().log("Primary region unhealthy - Frontend: " + isFrontendHealthy + ", Backend: " + isBackendHealthy + ", Failures: " + failures);
-                try {
-                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
-                } catch (Exception e) {
-                    context.getLogger().log("Failed to publish initial alert message: " + e.getMessage());
-                }
-
-                if (failures >= FAILURE_THRESHOLD) {
-                    response.put("status", "triggered");
-                    response.put("message", "Disaster recovery should be triggered due to primary region outage");
-                    consecutiveFailures.set(0);
-                    alertMessage.put("event", "disaster_recovery_triggered");
-                    alertMessage.put("details", "DR should be triggered due to " + failures + " consecutive failures. Frontend Healthy: " + isFrontendHealthy + ", Backend Healthy: " + isBackendHealthy);
-                    try {
-                        snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
-                    } catch (Exception e) {
-                        context.getLogger().log("Failed to publish disaster recovery message: " + e.getMessage());
-                    }
-                } else {
-                    response.put("status", "warning");
-                    response.put("message", "Primary region unhealthy, waiting for threshold (" + failures + "/" + FAILURE_THRESHOLD + ")");
-                }
+                handleUnhealthyRegion(response, alertMessage, isFrontendHealthy, isBackendHealthy, context);
             } else {
-                consecutiveFailures.set(0);
-                response.put("status", "healthy");
-                response.put("message", "Primary region is healthy");
-                try {
-                    snsUtil.publishMessage(backupAlertTopic, alertMessage, context);
-                } catch (Exception e) {
-                    context.getLogger().log("Failed to publish healthy status message: " + e.getMessage());
-                }
+                handleHealthyRegion(response, alertMessage, context);
             }
 
             return response;
 
         } catch (Exception e) {
             context.getLogger().log("Error in region monitor: " + e.getMessage());
-            response.put("status", "error");
-            response.put("errorMessage", e.getMessage());
-            Map<String, String> errorMessage = new HashMap<>();
-            errorMessage.put("event", "region_monitor_error");
-            errorMessage.put("error", e.getMessage());
-            errorMessage.put("timestamp", Instant.now().toString());
-            try {
-                snsUtil.publishMessage(backupAlertTopic, errorMessage, context);
-            } catch (Exception e2) {
-                context.getLogger().log("Failed to publish error message: " + e2.getMessage());
-            }
-            return response;
-        } finally {
-            cloudWatchClient.close();
-            try {
-                Thread.sleep(5000);
-                snsUtil.close();
-            } catch (InterruptedException e) {
-                context.getLogger().log("Interrupted while waiting to close SNSUtil: " + e.getMessage());
-            }
+            return handleError(e, context);
+        }
+    }
+
+    private Map<String, String> createBaseAlertMessage(boolean isFrontendHealthy,
+                                                       boolean isBackendHealthy,
+                                                       boolean isPrimaryRegionHealthy) {
+        Map<String, String> alertMessage = new HashMap<>();
+        alertMessage.put("event", "region_monitor_check");
+        alertMessage.put("timestamp", Instant.now().toString());
+        alertMessage.put("primaryRegion", primaryRegion);
+        alertMessage.put("frontendHealthy", String.valueOf(isFrontendHealthy));
+        alertMessage.put("backendHealthy", String.valueOf(isBackendHealthy));
+        alertMessage.put("healthy", String.valueOf(isPrimaryRegionHealthy));
+        return alertMessage;
+    }
+
+    private void handleUnhealthyRegion(Map<String, String> response,
+                                       Map<String, String> alertMessage,
+                                       boolean isFrontendHealthy,
+                                       boolean isBackendHealthy,
+                                       Context context) {
+        int failures = consecutiveFailures.incrementAndGet();
+        alertMessage.put("consecutiveFailures", String.valueOf(failures));
+
+        context.getLogger().log(String.format(
+                "Primary region unhealthy - Frontend: %s, Backend: %s, Failures: %d",
+                isFrontendHealthy, isBackendHealthy, failures));
+
+        publishMessage(alertMessage, context, "initial alert");
+
+        if (failures >= FAILURE_THRESHOLD) {
+            consecutiveFailures.set(0);
+            response.put("status", "triggered");
+            response.put("message", "Disaster recovery should be triggered due to primary region outage");
+
+            Map<String, String> drAlertMessage = new HashMap<>(alertMessage);
+            drAlertMessage.put("event", "disaster_recovery_triggered");
+            drAlertMessage.put("details", String.format(
+                    "DR triggered due to %d consecutive failures. Frontend: %s, Backend: %s",
+                    failures, isFrontendHealthy, isBackendHealthy));
+
+            publishMessage(drAlertMessage, context, "disaster recovery");
+        } else {
+            response.put("status", "warning");
+            response.put("message", String.format(
+                    "Primary region unhealthy, waiting for threshold (%d/%d)",
+                    failures, FAILURE_THRESHOLD));
+        }
+    }
+
+    private void handleHealthyRegion(Map<String, String> response,
+                                     Map<String, String> alertMessage,
+                                     Context context) {
+        consecutiveFailures.set(0);
+        response.put("status", "healthy");
+        response.put("message", "Primary region is healthy");
+        publishMessage(alertMessage, context, "healthy status");
+    }
+
+    private Map<String, String> handleError(Exception e, Context context) {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("errorMessage", e.getMessage());
+
+        Map<String, String> errorMessage = new HashMap<>();
+        errorMessage.put("event", "region_monitor_error");
+        errorMessage.put("error", e.getMessage());
+        errorMessage.put("timestamp", Instant.now().toString());
+
+        publishMessage(errorMessage, context, "error");
+        return response;
+    }
+
+    private void publishMessage(Map<String, String> message, Context context, String messageType) {
+        try {
+            getSNSUtil().publishMessage(backupAlertTopic, message, context);
+        } catch (Exception e) {
+            context.getLogger().log(String.format(
+                    "Failed to publish %s message: %s", messageType, e.getMessage()));
         }
     }
 
@@ -113,7 +153,8 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
             DescribeAlarmsRequest request = DescribeAlarmsRequest.builder()
                     .alarmNames(frontendAlarmName, backendAlarmName)
                     .build();
-            DescribeAlarmsResponse response = cloudWatchClient.describeAlarms(request);
+
+            DescribeAlarmsResponse response = getCloudWatchClient().describeAlarms(request);
 
             for (MetricAlarm alarm : response.metricAlarms()) {
                 String alarmName = alarm.alarmName();
@@ -121,10 +162,14 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
 
                 if (alarmName.equals(frontendAlarmName)) {
                     isFrontendHealthy = !state.equals("ALARM");
-                    context.getLogger().log("Frontend Alarm State: " + state + ", Healthy: " + isFrontendHealthy);
+                    context.getLogger().log(String.format(
+                            "Frontend Alarm [%s] State: %s, Healthy: %s",
+                            alarmName, state, isFrontendHealthy));
                 } else if (alarmName.equals(backendAlarmName)) {
                     isBackendHealthy = !state.equals("ALARM");
-                    context.getLogger().log("Backend Alarm State: " + state + ", Healthy: " + isBackendHealthy);
+                    context.getLogger().log(String.format(
+                            "Backend Alarm [%s] State: %s, Healthy: %s",
+                            alarmName, state, isBackendHealthy));
                 }
             }
         } catch (Exception e) {
