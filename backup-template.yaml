@@ -98,7 +98,7 @@ Resources:
       EvaluationPeriods: 2
       Threshold: 2
       ComparisonOperator: LessThanOrEqualToThreshold
-      TreatMissingData: breaching
+      TreatMissingData: notBreaching
 
   Backend5XXAlarm:
     Type: AWS::CloudWatch::Alarm

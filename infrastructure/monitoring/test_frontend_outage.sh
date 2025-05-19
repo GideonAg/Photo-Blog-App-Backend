@@ -4,26 +4,10 @@
 STACK_NAME="photo-blog-backup"
 REGION="eu-central-1"
 DOMAIN_NAME="mscv2group1.link"
-HEALTH_CHECK_ID=$(aws route53 list-health-checks --region $REGION --query "HealthChecks[?HealthCheckConfig.FullyQualifiedDomainName=='$DOMAIN_NAME'].Id" --output text)
+FRONTEND_ALARM_NAME="photo-blog-group1-dev-FrontendHealthAlarm"
+BACKEND_ALARM_NAME="photo-blog-group1-dev-Backend5XXAlarm"
 
-# Check if HEALTH_CHECK_ID is retrieved
-if [ -z "$HEALTH_CHECK_ID" ]; then
-  echo "Error: Could not find Health Check ID for $DOMAIN_NAME. Please verify the Route 53 Health Check is created."
-  exit 1
-fi
-
-# Step 1: Update Health Check to simulate outage (invalid port)
-echo "Simulating frontend outage by setting port to 81..."
-aws route53 update-health-check \
-  --health-check-id $HEALTH_CHECK_ID \
-  --cli-input-json '{"HealthCheckConfig":{"Type":"HTTP","FullyQualifiedDomainName":"'$DOMAIN_NAME'","Port":81,"ResourcePath":"/","RequestInterval":30,"FailureThreshold":3}}' \
-  --region $REGION
-
-# Wait for health check to fail (approximately 90 seconds for 3 failures with 30s interval)
-echo "Waiting for health check to fail..."
-sleep 90
-
-# Step 2: Get the correct Lambda function ARN from the stack
+# Step 1: Get the Lambda function ARN from the stack
 FUNCTION_ARN=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \
@@ -35,28 +19,50 @@ if [ -z "$FUNCTION_ARN" ]; then
   exit 1
 fi
 
+# Step 2: Simulate setting frontend alarm to ALARM state
+echo "Setting Frontend CloudWatch Alarm to ALARM state..."
+aws cloudwatch set-alarm-state \
+  --alarm-name $FRONTEND_ALARM_NAME \
+  --state-value ALARM \
+  --state-reason "Testing disaster recovery" \
+  --region $REGION
+
+# Wait for alarm state to propagate
+echo "Waiting for alarm state to propagate..."
+sleep 30
+
 # Step 3: Invoke RegionMonitorFunction twice to exceed failure threshold
-echo "Invoking RegionMonitorFunction..."
+echo "Invoking RegionMonitorFunction to detect unhealthy state..."
 for i in {1..2}; do
+  echo "Invocation $i of 2..."
   aws lambda invoke \
     --function-name $(basename $FUNCTION_ARN) \
     --payload '{}' \
     --region $REGION \
     output.json
-  echo "Invocation $i completed. Waiting 5 seconds..."
-  sleep 5
+
+  # Check if the output indicates a disaster recovery trigger
+  TRIGGERED=$(cat output.json | grep -c "triggered")
+  if [ $TRIGGERED -gt 0 ]; then
+    echo "Disaster recovery triggered on invocation $i!"
+    break
+  fi
+
+  echo "Waiting 30 seconds before next invocation..."
+  sleep 30
 done
 
-# Step 4: Revert Health Check to original configuration (port 80)
-echo "Reverting Health Check to original configuration (port 80)..."
-aws route53 update-health-check \
-  --health-check-id $HEALTH_CHECK_ID \
-  --cli-input-json '{"HealthCheckConfig":{"Type":"HTTP","FullyQualifiedDomainName":"'$DOMAIN_NAME'","Port":80,"ResourcePath":"/","RequestInterval":30,"FailureThreshold":3}}' \
+# Step 4: Restore alarm to OK state after test
+echo "Restoring Frontend CloudWatch Alarm to OK state..."
+aws cloudwatch set-alarm-state \
+  --alarm-name $FRONTEND_ALARM_NAME \
+  --state-value OK \
+  --state-reason "Testing completed" \
   --region $REGION
 
 # Step 5: Check Logs and Email
 echo "Check CloudWatch Logs for RegionMonitorFunction and BackupAlertHandler."
-echo "Verify email sent to gideon.agbosu@amalitech.com with [Photo Blog] Disaster Recovery Triggered."
+echo "Verify email sent to the SNS topic subscribers with [Photo Blog] Disaster Recovery Triggered."
 
 # Cleanup output file
 rm -f output.json

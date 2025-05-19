@@ -115,14 +115,6 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, String>,
                     .build();
             DescribeAlarmsResponse response = cloudWatchClient.describeAlarms(request);
 
-            /*
-             * Just to simulate backend not reachable
-             */
-            double simulated5xxErrors = 15.0;
-            context.getLogger().log("Simulated 5XX errors detected: " + simulated5xxErrors);
-            if (simulated5xxErrors > 10)
-                isBackendHealthy = false;
-
             for (MetricAlarm alarm : response.metricAlarms()) {
                 String alarmName = alarm.alarmName();
                 String state = alarm.stateValue().toString();
