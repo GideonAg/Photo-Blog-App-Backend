@@ -69,6 +69,54 @@ Parameters:
     Default: "fmu055s1s0"
 
 Resources:
+  FrontendHealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTP
+        FullyQualifiedDomainName: !Ref DomainName
+        Port: 80
+        ResourcePath: /
+        RequestInterval: 30
+        FailureThreshold: 3
+      HealthCheckTags:
+        - Key: Name
+          Value: !Sub "${AppName}-${StageName}-frontend-health-check"
+
+  FrontendHealthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppName}-${StageName}-FrontendHealthAlarm"
+      AlarmDescription: Alarm when frontend health check fails
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions:
+        - Name: HealthCheckId
+          Value: !Ref FrontendHealthCheck
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 2
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  Backend5XXAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AppName}-${StageName}-Backend5XXAlarm"
+      AlarmDescription: Alarm when API Gateway 5XX errors exceed threshold in primary region
+      Namespace: AWS/ApiGateway
+      MetricName: 5XXError
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref PrimaryApiGatewayId
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
   BackupBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -958,6 +1006,8 @@ Resources:
           BACKUP_REGION: !Ref AWS::Region
           BACKUP_ALERT_TOPIC: !Ref BackupAlertTopic
           API_GATEWAY_ID: !Ref PrimaryApiGatewayId
+          FRONTEND_ALARM_NAME: !Ref FrontendHealthAlarm
+          BACKEND_ALARM_NAME: !Ref Backend5XXAlarm
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt BackupAlertTopic.TopicName
@@ -1005,6 +1055,11 @@ Resources:
             Topic: !Ref BackupAlertTopic
 
 Outputs:
+  RegionMonitorFunctionArn:
+    Description: ARN of the RegionMonitorFunction
+    Value: !GetAtt RegionMonitorFunction.Arn
+    Export:
+      Name: !Sub "${AppName}-${StageName}-region-monitor-function-arn"
   BackupBucketName:
     Description: Name of the backup S3 bucket
     Value: !Ref BackupBucket
