@@ -15,7 +15,7 @@ import com.photoblog.utils.PhotoShareResponse;
 import com.photoblog.utils.S3Util;
 
 public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private S3Util s3Util;
+    protected S3Util s3Util;
     private final ObjectMapper mapper;
 
     public PhotoShareHandler() {
