@@ -53,9 +53,9 @@ public class RegionMonitorHandler implements RequestHandler<Map<String, Object>,
 
             if (!isPrimaryRegionHealthy) {
                 handleUnhealthyRegion(response, alertMessage, isFrontendHealthy, isBackendHealthy, context);
-            } else {
+            } /* else {
                 handleHealthyRegion(response, alertMessage, context);
-            }
+            } */
 
             return response;
 
