@@ -26,7 +26,7 @@ Parameters:
     Description: Email address to send notifications from
   HostedZoneId:
     Type: String
-    Default: Z07073352UBORQGYJNAVV
+    Default: Z00340312Q17LYSJL1I7U
     Description: Route53 hosted zone ID for the domain
   BackupRegion:
     Type: String
@@ -205,7 +205,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "${AppName}-${StageName}-final-delete"
-      MessageRetentionPeriod: 25
+      MessageRetentionPeriod: 300
 
   UserNotificationTopic:
     Type: AWS::SNS::Topic
