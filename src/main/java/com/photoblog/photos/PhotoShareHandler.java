@@ -30,15 +30,18 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
 
         try {
             Map<String, String> authorizeMap = AuthorizerClaims.extractCognitoClaims(requestEvent);
-            String userId = authorizeMap.get("sub");
+            String userId = authorizeMap.get("userId");
             String photoId = requestEvent.getPathParameters().get("photoId");
+            context.getLogger().log(photoId + "   PHOTO_ID");
 
             Photo photo = DynamoDBUtil.getPhotoById(userId, photoId);
             if(photo == null) {
                 return response.withBody(mapper.writeValueAsString(new PhotoShareResponse("Failed to fetch link. Not authorized"))).withStatusCode(500);
             }
+            context.getLogger().log(photo.getImageName() + "IMAGE NAME");
 
-            String shareLink = s3Util.getImage(userId, photoId);
+            String shareLink = s3Util.getImage(photo.getImageName(), photoId);
+            context.getLogger().log("GOT HERE" + shareLink);
 
             PhotoShareResponse photoShareResponse = new PhotoShareResponse("Share link generated successfully", shareLink);
             String body = mapper.writeValueAsString(photoShareResponse);
@@ -46,6 +49,7 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withBody(body).withStatusCode(200);
         } 
         catch (RuntimeException e) {
+            context.getLogger().log(e.getMessage());
             PhotoShareResponse errorResponse = new PhotoShareResponse("There was an error while generating the link");
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
@@ -55,7 +59,8 @@ public class PhotoShareHandler implements RequestHandler<APIGatewayProxyRequestE
             return response.withStatusCode(500);
         }
         catch (Exception e) {
-            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error");
+            context.getLogger().log(e.getMessage());
+            PhotoShareResponse errorResponse = new PhotoShareResponse("Internal server error " + e.getMessage());
             try {
                 response.setBody(mapper.writeValueAsString(errorResponse));
             } catch (Exception jsonEx) {

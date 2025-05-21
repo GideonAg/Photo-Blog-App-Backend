@@ -2,149 +2,184 @@ package com.photoblog.disaster;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.photoblog.utils.SNSUtil;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
-import software.amazon.awssdk.services.cloudwatch.model.GetMetricDataRequest;
-import software.amazon.awssdk.services.cloudwatch.model.Metric;
-import software.amazon.awssdk.services.cloudwatch.model.MetricDataQuery;
-import software.amazon.awssdk.services.cloudwatch.model.MetricStat;
-import software.amazon.awssdk.services.health.HealthClient;
-import software.amazon.awssdk.services.health.model.DescribeEventsRequest;
-import software.amazon.awssdk.services.health.model.Event;
-import software.amazon.awssdk.services.health.model.EventStatusCode;
-import software.amazon.awssdk.services.lambda.LambdaClient;
-import software.amazon.awssdk.services.lambda.model.InvokeRequest;
+import software.amazon.awssdk.services.cloudwatch.model.DescribeAlarmsRequest;
+import software.amazon.awssdk.services.cloudwatch.model.DescribeAlarmsResponse;
+import software.amazon.awssdk.services.cloudwatch.model.MetricAlarm;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RegionMonitorHandler implements RequestHandler<Map<String, String>, Map<String, String>> {
+public class RegionMonitorHandler implements RequestHandler<Map<String, Object>, Map<String, String>> {
 
-    private final HealthClient healthClient = HealthClient.builder().build();
-    private final CloudWatchClient cloudWatchClient = CloudWatchClient.builder().build();
-    private final LambdaClient lambdaClient = LambdaClient.builder().build();
-    private final SNSUtil snsUtil = new SNSUtil();
+    private static CloudWatchClient cloudWatchClient;
+    private static SNSUtil snsUtil;
+
     private static final AtomicInteger consecutiveFailures = new AtomicInteger(0);
     private static final int FAILURE_THRESHOLD = 2;
 
     private final String primaryRegion = System.getenv("PRIMARY_REGION");
-    private final String systemAlertTopic = System.getenv("SYSTEM_ALERT_TOPIC");
-    private final String apiGatewayId = System.getenv("API_GATEWAY_ID");
+    private final String backupAlertTopic = System.getenv("BACKUP_ALERT_TOPIC");
+    private final String frontendAlarmName = System.getenv("FRONTEND_ALARM_NAME");
+    private final String backendAlarmName = System.getenv("BACKEND_ALARM_NAME");
+
+    private synchronized CloudWatchClient getCloudWatchClient() {
+        if (cloudWatchClient == null) {
+            cloudWatchClient = CloudWatchClient.builder().build();
+        }
+        return cloudWatchClient;
+    }
+
+    private synchronized SNSUtil getSNSUtil() {
+        if (snsUtil == null) {
+            snsUtil = new SNSUtil();
+        }
+        return snsUtil;
+    }
 
     @Override
-    public Map<String, String> handleRequest(Map<String, String> input, Context context) {
+    public Map<String, String> handleRequest(Map<String, Object> input, Context context) {
         Map<String, String> response = new HashMap<>();
+
         try {
-            boolean isPrimaryRegionHealthy = checkPrimaryRegionHealth(context);
-            Map<String, String> alertMessage = new HashMap<>();
-            alertMessage.put("event", "region_monitor_check");
-            alertMessage.put("timestamp", Instant.now().toString());
-            alertMessage.put("primaryRegion", primaryRegion);
-            alertMessage.put("healthy", String.valueOf(isPrimaryRegionHealthy));
+            Map<String, Boolean> healthStatus = checkPrimaryRegionHealth(context);
+            boolean isFrontendHealthy = healthStatus.get("frontend");
+            boolean isBackendHealthy = healthStatus.get("backend");
+            boolean isPrimaryRegionHealthy = isFrontendHealthy && isBackendHealthy;
+
+            Map<String, String> alertMessage = createBaseAlertMessage(isFrontendHealthy, isBackendHealthy, isPrimaryRegionHealthy);
 
             if (!isPrimaryRegionHealthy) {
-                int failures = consecutiveFailures.incrementAndGet();
-                alertMessage.put("consecutiveFailures", String.valueOf(failures));
-                context.getLogger().log("Primary region unhealthy, failures: " + failures);
-                snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
-
-                if (failures >= FAILURE_THRESHOLD) {
-                    response.put("status", "triggered");
-                    response.put("message", "Disaster recovery should be triggered due to primary region outage");
-                    consecutiveFailures.set(0);
-                    alertMessage.put("event", "disaster_recovery_triggered");
-                    alertMessage.put("details", "DR should be triggered due to " + failures + " consecutive failures");
-                    snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
-                } else {
-                    response.put("status", "warning");
-                    response.put("message", "Primary region unhealthy, waiting for threshold (" + failures + "/" + FAILURE_THRESHOLD + ")");
-                }
-            } else {
-                consecutiveFailures.set(0);
-                response.put("status", "healthy");
-                response.put("message", "Primary region is healthy");
-                snsUtil.publishMessage(systemAlertTopic, alertMessage, context);
-            }
+                handleUnhealthyRegion(response, alertMessage, isFrontendHealthy, isBackendHealthy, context);
+            } /* else {
+                handleHealthyRegion(response, alertMessage, context);
+            } */
 
             return response;
 
         } catch (Exception e) {
             context.getLogger().log("Error in region monitor: " + e.getMessage());
-            response.put("status", "error");
-            response.put("errorMessage", e.getMessage());
-            Map<String, String> errorMessage = new HashMap<>();
-            errorMessage.put("event", "region_monitor_error");
-            errorMessage.put("error", e.getMessage());
-            errorMessage.put("timestamp", Instant.now().toString());
-            snsUtil.publishMessage(systemAlertTopic, errorMessage, context);
-            return response;
-        } finally {
-            healthClient.close();
-            cloudWatchClient.close();
-            lambdaClient.close();
-            snsUtil.close();
+            return handleError(e, context);
         }
     }
 
-    private boolean checkPrimaryRegionHealth(Context context) {
+    private Map<String, String> createBaseAlertMessage(boolean isFrontendHealthy,
+                                                       boolean isBackendHealthy,
+                                                       boolean isPrimaryRegionHealthy) {
+        Map<String, String> alertMessage = new HashMap<>();
+        alertMessage.put("event", "region_monitor_check");
+        alertMessage.put("timestamp", Instant.now().toString());
+        alertMessage.put("primaryRegion", primaryRegion);
+        alertMessage.put("frontendHealthy", String.valueOf(isFrontendHealthy));
+        alertMessage.put("backendHealthy", String.valueOf(isBackendHealthy));
+        alertMessage.put("healthy", String.valueOf(isPrimaryRegionHealthy));
+        return alertMessage;
+    }
+
+    private void handleUnhealthyRegion(Map<String, String> response,
+                                       Map<String, String> alertMessage,
+                                       boolean isFrontendHealthy,
+                                       boolean isBackendHealthy,
+                                       Context context) {
+        int failures = consecutiveFailures.incrementAndGet();
+        alertMessage.put("consecutiveFailures", String.valueOf(failures));
+
+        context.getLogger().log(String.format(
+                "Primary region unhealthy - Frontend: %s, Backend: %s, Failures: %d",
+                isFrontendHealthy, isBackendHealthy, failures));
+
+        publishMessage(alertMessage, context, "initial alert");
+
+        if (failures >= FAILURE_THRESHOLD) {
+            consecutiveFailures.set(0);
+            response.put("status", "triggered");
+            response.put("message", "Disaster recovery should be triggered due to primary region outage");
+
+            Map<String, String> drAlertMessage = new HashMap<>(alertMessage);
+            drAlertMessage.put("event", "disaster_recovery_triggered");
+            drAlertMessage.put("details", String.format(
+                    "DR triggered due to %d consecutive failures. Frontend: %s, Backend: %s",
+                    failures, isFrontendHealthy, isBackendHealthy));
+
+            publishMessage(drAlertMessage, context, "disaster recovery");
+        } else {
+            response.put("status", "warning");
+            response.put("message", String.format(
+                    "Primary region unhealthy, waiting for threshold (%d/%d)",
+                    failures, FAILURE_THRESHOLD));
+        }
+    }
+
+    private void handleHealthyRegion(Map<String, String> response,
+                                     Map<String, String> alertMessage,
+                                     Context context) {
+        consecutiveFailures.set(0);
+        response.put("status", "healthy");
+        response.put("message", "Primary region is healthy");
+        publishMessage(alertMessage, context, "healthy status");
+    }
+
+    private Map<String, String> handleError(Exception e, Context context) {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("errorMessage", e.getMessage());
+
+        Map<String, String> errorMessage = new HashMap<>();
+        errorMessage.put("event", "region_monitor_error");
+        errorMessage.put("error", e.getMessage());
+        errorMessage.put("timestamp", Instant.now().toString());
+
+        publishMessage(errorMessage, context, "error");
+        return response;
+    }
+
+    private void publishMessage(Map<String, String> message, Context context, String messageType) {
         try {
-            DescribeEventsRequest eventsRequest = DescribeEventsRequest.builder()
-                    .filter(f -> f.regions(Collections.singletonList(primaryRegion))
-                            .eventStatusCodes(EventStatusCode.OPEN, EventStatusCode.UPCOMING))
+            getSNSUtil().publishMessage(backupAlertTopic, message, context);
+        } catch (Exception e) {
+            context.getLogger().log(String.format(
+                    "Failed to publish %s message: %s", messageType, e.getMessage()));
+        }
+    }
+
+    private Map<String, Boolean> checkPrimaryRegionHealth(Context context) {
+        Map<String, Boolean> healthStatus = new HashMap<>();
+        boolean isFrontendHealthy = true;
+        boolean isBackendHealthy = true;
+
+        try {
+            DescribeAlarmsRequest request = DescribeAlarmsRequest.builder()
+                    .alarmNames(frontendAlarmName, backendAlarmName)
                     .build();
-            for (Event event : healthClient.describeEvents(eventsRequest).events()) {
-                if (event.region().equals(primaryRegion) && event.service().equals("AWS")) {
-                    context.getLogger().log("AWS Health event detected: " + event.eventTypeCode());
-                    return false;
+
+            DescribeAlarmsResponse response = getCloudWatchClient().describeAlarms(request);
+
+            for (MetricAlarm alarm : response.metricAlarms()) {
+                String alarmName = alarm.alarmName();
+                String state = alarm.stateValue().toString();
+
+                if (alarmName.equals(frontendAlarmName)) {
+                    isFrontendHealthy = !state.equals("ALARM");
+                    context.getLogger().log(String.format(
+                            "Frontend Alarm [%s] State: %s, Healthy: %s",
+                            alarmName, state, isFrontendHealthy));
+                } else if (alarmName.equals(backendAlarmName)) {
+                    isBackendHealthy = !state.equals("ALARM");
+                    context.getLogger().log(String.format(
+                            "Backend Alarm [%s] State: %s, Healthy: %s",
+                            alarmName, state, isBackendHealthy));
                 }
             }
         } catch (Exception e) {
-            context.getLogger().log("Error checking AWS Health API: " + e.getMessage());
-            return false;
+            context.getLogger().log("Error checking CloudWatch Alarms: " + e.getMessage());
+            isFrontendHealthy = false;
+            isBackendHealthy = false;
         }
 
-        try {
-            Instant endTime = Instant.now();
-            Instant startTime = endTime.minus(5, ChronoUnit.MINUTES);
-            Metric metric = Metric.builder()
-                    .namespace("AWS/ApiGateway")
-                    .metricName("5XXError")
-                    .dimensions(d -> d.name("ApiId").value(apiGatewayId))
-                    .build();
-            MetricStat stat = MetricStat.builder()
-                    .metric(metric)
-                    .stat("Sum")
-                    .period(300)
-                    .build();
-            MetricDataQuery query = MetricDataQuery.builder()
-                    .id("m1")
-                    .metricStat(stat)
-                    .build();
-            GetMetricDataRequest metricRequest = GetMetricDataRequest.builder()
-                    .metricDataQueries(query)
-                    .startTime(startTime)
-                    .endTime(endTime)
-                    .build();
-            double errorCount = cloudWatchClient.getMetricData(metricRequest)
-                    .metricDataResults()
-                    .stream()
-                    .flatMap(r -> r.values().stream())
-                    .mapToDouble(Double::doubleValue)
-                    .sum();
-            if (errorCount > 10) {
-                context.getLogger().log("API Gateway 5XX errors detected: " + errorCount);
-                return false;
-            }
-        } catch (Exception e) {
-            context.getLogger().log("Error checking API Gateway metrics: " + e.getMessage());
-            return false;
-        }
-
-        return true;
+        healthStatus.put("frontend", isFrontendHealthy);
+        healthStatus.put("backend", isBackendHealthy);
+        return healthStatus;
     }
 }

@@ -13,9 +13,9 @@ public class SNSUtil {
     private final ObjectMapper objectMapper;
 
     public SNSUtil() {
-        String region = System.getenv("PRIMARY_REGION");
+        String region = System.getenv("BACKUP_REGION");
         if (region == null) {
-            throw new IllegalStateException("PRIMARY_REGION environment variable is not set");
+            throw new IllegalStateException("BACKUP_REGION environment variable is not set");
         }
         this.snsClient = SnsClient.builder()
                 .region(Region.of(region))

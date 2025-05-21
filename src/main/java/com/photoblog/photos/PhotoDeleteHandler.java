@@ -63,16 +63,17 @@ public class PhotoDeleteHandler implements RequestHandler<APIGatewayProxyRequest
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Forbidden: User ID mismatch")));
             }
-            String s3Key = userId + "/" + photoId;
-
+            
             // Load the Photo object
             Photo photo = DynamoDBUtil.getPhotoById(userId, photoId);
+            context.getLogger().log("USER ID:" + userId + "   PHOTO_ID" + photoId);
             if (photo == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(404)
                         .withHeaders(HeadersUtil.getHeaders())
                         .withBody(gson.toJson(Map.of("error", "Photo not found")));
             }
+            String s3Key = photo.getImageName();
 
             // Add delete marker to S3 object
             DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()

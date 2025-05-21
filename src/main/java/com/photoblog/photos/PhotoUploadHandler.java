@@ -70,13 +70,13 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
 
             String base64Image = (String) requestBody.get("image");
             String contentType = (String) requestBody.get("contentType");
-            String fileName = (String) requestBody.get("fileName");
 
 
-            if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty() || fileName == null || fileName.isEmpty()) {
+
+            if (base64Image == null || base64Image.isEmpty() || contentType == null || contentType.isEmpty()) {
                 return buildErrorResponse(response, 400, "Missing required fields: image and/or contentType");
             }
-            String fileNameWithExtension = fileName + "." + contentType.split("/")[1];
+            String fileNameWithExtension = firstName + System.currentTimeMillis()+ "." + contentType.split("/")[1];
             if (!ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
                 return buildErrorResponse(response, 400, "Unsupported content type: " + contentType);
             }

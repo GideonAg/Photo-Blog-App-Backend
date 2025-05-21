@@ -41,7 +41,7 @@ public class S3Util {
      * @return Presigned URL for the image (3-hour expiry).
      */
     public String getImage(String userId, String photoId) {
-        String key = userId + "/" + photoId;
+        String key = userId;
         try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(mainBucket)
@@ -61,7 +61,7 @@ public class S3Util {
      * @return Presigned URL for the deleted image.
      */
     public String getDeletedImage(String userId, String photoId, String versionId) {
-        String key = userId + "/" + photoId;
+        String key = userId;
         try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(mainBucket)
@@ -81,7 +81,7 @@ public class S3Util {
      * @param versionId The version ID to restore.
      */
     public void restoreImage(String userId, String photoId, String versionId) {
-        String key = userId + "/" + photoId;
+        String key = userId;
         try {
             CopyObjectRequest copyRequest = CopyObjectRequest.builder()
                     .sourceBucket(mainBucket)

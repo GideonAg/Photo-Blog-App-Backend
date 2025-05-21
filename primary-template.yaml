@@ -158,10 +158,12 @@ Resources:
       KeySchema:
         - AttributeName: photoId
           KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: UserIdIndex
           KeySchema:
-            - AttributeName: userId
+            - AttributeName: photoId
               KeyType: HASH
             - AttributeName: createdAt
               KeyType: RANGE
@@ -808,8 +810,17 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PhotosTable
-        - S3CrudPolicy:
-            BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:DeleteObject
+                - s3:ListBucket
+                - s3:ListBucketVersions
+              Resource:
+                - !GetAtt MainBucket.Arn
+                - !Sub "${MainBucket.Arn}/*"
       Events:
         ApiEvent:
           Type: Api
@@ -872,6 +883,11 @@ Resources:
             TableName: !Ref PhotosTable
         - S3ReadPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListBucketVersions
+              Resource: !Sub arn:aws:s3:::${MainBucket}
       Events:
         ApiEvent:
           Type: Api
@@ -903,6 +919,11 @@ Resources:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:CopyObject
+              Resource: !Sub arn:aws:s3:::${MainBucket}/*
       Events:
         ApiEvent:
           Type: Api
@@ -934,6 +955,14 @@ Resources:
             TableName: !Ref PhotosTable
         - S3CrudPolicy:
             BucketName: !Ref MainBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListBucketVersions
+                - s3:DeleteObjectVersion
+              Resource:
+                - !Sub arn:aws:s3:::${MainBucket}/*
+                - !Sub arn:aws:s3:::${MainBucket}
       Events:
         ApiEvent:
           Type: Api
