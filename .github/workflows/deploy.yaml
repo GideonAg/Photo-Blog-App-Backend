@@ -65,7 +65,7 @@ jobs:
               PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
-            --s3-bucket my-photo-blog-backup-deployment-buckets 2>&1)
+            --s3-bucket my-photo-blog-backup-deployment-buckets-group1 2>&1)
           EXIT_CODE=$?
           set -e
           
@@ -224,4 +224,4 @@ jobs:
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --s3-bucket my-photo-blog-deployment-bucket
+            --s3-bucket my-photo-blog-deployment-bucket-group1
