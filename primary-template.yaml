@@ -230,7 +230,7 @@ Resources:
       VisibilityTimeout: 300
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt FinalDeleteQueue.Arn
-        maxReceiveCount: 3
+        maxReceiveCount: 4
 
   UserPool:
     Type: AWS::Cognito::UserPool
