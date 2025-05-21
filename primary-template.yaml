@@ -202,10 +202,10 @@ Resources:
       DisplayName: "System Alerts"
 
   FinalDeleteQueue:
-  Type: AWS::SQS::Queue
-  Properties:
-    QueueName: !Sub "${AppName}-${StageName}-final-delete"
-    MessageRetentionPeriod: 25
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AppName}-${StageName}-final-delete"
+      MessageRetentionPeriod: 25
 
   UserNotificationTopic:
     Type: AWS::SNS::Topic
