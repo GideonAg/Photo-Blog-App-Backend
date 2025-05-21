@@ -26,7 +26,7 @@ Parameters:
     Description: Email address to send notifications from
   HostedZoneId:
     Type: String
-    Default: Z00340312Q17LYSJL1I7U
+    Default: Z08701969OH33BHAXMWT
     Description: Route53 hosted zone ID for the domain
   BackupRegion:
     Type: String
@@ -163,7 +163,7 @@ Resources:
       GlobalSecondaryIndexes:
         - IndexName: UserIdIndex
           KeySchema:
-            - AttributeName: photoId
+            - AttributeName: userId
               KeyType: HASH
             - AttributeName: createdAt
               KeyType: RANGE
