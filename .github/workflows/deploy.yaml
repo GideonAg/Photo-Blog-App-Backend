@@ -61,7 +61,7 @@ jobs:
             --parameter-overrides \
               AppName=photo-blog-group1 \
               StageName=dev \
-              PrimaryRegion=eu-central-1 \
+              PrimaryRegion=eu-west-1 \
               PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
