@@ -34,11 +34,11 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private static final String TMP_DIR = "/tmp";
     private final String STAGING_BUCKET = System.getenv("STAGING_BUCKET");
     private final String MAIN_BUCKET = System.getenv("MAIN_BUCKET");
-    // private final String UPLOADED_TIME = Instant.now().toString();
     private final S3Client s3Client = createS3Client();
     private String WATERMARK_TEXT = null;
     private final SESUtil sesUtil = getSesUtil();
-    private final DynamoDBUtil databaseUtil = getDatabaseUtil();
+    private String fileExtension = "";
+
 
 
 
@@ -61,6 +61,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
                 // Deserialize the message body to extract file details
                 Map<String, Object> messageMap = objectMapper.readValue(messageBody, Map.class);
                 sourceKey = (String) messageMap.get("objectKey");
+                fileExtension = getFileExtension(sourceKey);
                 String firstName = (String) messageMap.get("firstName");
                 String lastName = (String) messageMap.get("lastName");
                 userEmail = (String) messageMap.get("email");
@@ -106,7 +107,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     }
 
     private File processImage(File unprocessedFile, String watermarkText, Context context) throws IOException {
-        File processedFile = new File(TMP_DIR + "/processedFile.jpg");
+        File processedFile = new File(TMP_DIR + "/processedFile."+fileExtension);
         ImageProcessor processor = new ImageProcessor();
         ImageProcessingRequest request = ImageProcessingRequest.builder()
                 .inputFile(unprocessedFile)
@@ -145,7 +146,7 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
     private File downloadFileFromS3(String sourceKey, Context context) throws Exception {
         verifyFileExistsInS3(sourceKey, context);
         ResponseBytes<GetObjectResponse> objectBytes = getS3Object(sourceKey, context);
-        return saveBytesToFile(objectBytes.asByteArray(), TMP_DIR + "/unprocessedFile.jpg", context);
+        return saveBytesToFile(objectBytes.asByteArray(), TMP_DIR + "/unprocessedFile."+fileExtension, context);
     }
 
     private void verifyFileExistsInS3(String sourceKey, Context context) {
@@ -255,4 +256,16 @@ public class ImageProcessingHandler implements RequestHandler<SQSEvent, String> 
         return newImage;
     }
 
+    private static String getFileExtension(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return "";
+        }
+
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex == -1 || lastDotIndex == fileName.length() - 1) {
+            return "";
+        }
+
+        return fileName.substring(lastDotIndex + 1).toLowerCase();
+    }
 }
