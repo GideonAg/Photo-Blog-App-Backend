@@ -98,7 +98,7 @@ Resources:
       EvaluationPeriods: 2
       Threshold: 2
       ComparisonOperator: LessThanOrEqualToThreshold
-      TreatMissingData: breaching
+      TreatMissingData: notBreaching
 
   Backend5XXAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -998,7 +998,7 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: com.photoblog.disaster.RegionMonitorHandler::handleRequest
-      Timeout: 300
+      Timeout: 60
       MemorySize: 1024
       Environment:
         Variables:
