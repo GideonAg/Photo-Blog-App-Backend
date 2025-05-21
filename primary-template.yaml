@@ -202,10 +202,10 @@ Resources:
       DisplayName: "System Alerts"
 
   FinalDeleteQueue:
-  Type: AWS::SQS::Queue
-  Properties:
-    QueueName: !Sub "${AppName}-${StageName}-final-delete"
-    MessageRetentionPeriod: 25
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${AppName}-${StageName}-final-delete"
+      MessageRetentionPeriod: 25
 
   UserNotificationTopic:
     Type: AWS::SNS::Topic
@@ -230,7 +230,7 @@ Resources:
       VisibilityTimeout: 300
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt FinalDeleteQueue.Arn
-        maxReceiveCount: 4
+        maxReceiveCount: 2
 
   UserPool:
     Type: AWS::Cognito::UserPool
