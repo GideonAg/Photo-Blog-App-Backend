@@ -163,7 +163,7 @@ Resources:
       GlobalSecondaryIndexes:
         - IndexName: UserIdIndex
           KeySchema:
-            - AttributeName: photoId
+            - AttributeName: userId
               KeyType: HASH
             - AttributeName: createdAt
               KeyType: RANGE

@@ -21,7 +21,7 @@ public class PhotoUploadHandler implements RequestHandler<APIGatewayProxyRequest
     private final ObjectMapper objectMapper;
     private final Region region;
     private final UploadUtil uploadUtil;
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/gif", "image/jpg");
     private final Map<String, String> headers = HeadersUtil.getHeaders();
     private final QueueUtil queueUtil = new QueueUtil();
     private static final long MAX_IMAGE_SIZE_BYTES = 6 * 1024 * 1024;
