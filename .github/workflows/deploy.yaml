@@ -62,6 +62,7 @@ jobs:
               AppName=photo-blog-group1 \
               StageName=dev \
               PrimaryRegion=eu-west-1 \
+              DomainName=mscv2group0.link \
               PrimaryAccountId=${{ secrets.AWS_ACCOUNT_ID }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
@@ -221,6 +222,7 @@ jobs:
               BackupUserPoolId=${{ needs.deploy-backup.outputs.backup_user_pool_id }} \
               BackupUserPoolClientId=${{ needs.deploy-backup.outputs.backup_user_pool_client_id }} \
               BackupApiId=u6ph4tqpmj \
+              DomainName=mscv2group0.link \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \

@@ -284,7 +284,7 @@ Resources:
       Cors:
         AllowMethods: "'GET, DELETE, PUT, POST, OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: !Sub "https://${DomainName}"
+        AllowOrigin: !Sub "'https://${DomainName}'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
