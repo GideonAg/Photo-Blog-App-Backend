@@ -69,7 +69,7 @@ Resources:
             ExpirationInDays: 30
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: ['GET, DELETE, PUT, POST, OPTIONS']
+          - AllowedHeaders: ['Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token']
             AllowedMethods: [GET, POST, DELETE]
             AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
@@ -120,7 +120,7 @@ Resources:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
-          - AllowedHeaders: ['GET, DELETE, PUT, POST, OPTIONS']
+          - AllowedHeaders: ['Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token']
             AllowedMethods: [GET, POST, DELETE]
             AllowedOrigins: [ !Sub "https://${DomainName}" ]
             MaxAge: 3600
