@@ -3,7 +3,7 @@
 # Variables
 STACK_NAME="photo-blog-backup"
 REGION="eu-central-1"
-DOMAIN_NAME="mscv2group1.link"
+DOMAIN_NAME="mscv2group0.link"
 FRONTEND_ALARM_NAME="photo-blog-group1-dev-FrontendHealthAlarm"
 BACKEND_ALARM_NAME="photo-blog-group1-dev-Backend5XXAlarm"
 
